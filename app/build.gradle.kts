@@ -59,8 +59,8 @@ android {
     applicationId = "com.vttd.sieutrangnhi"
     minSdk = 24
     targetSdk = 36
-    versionCode =16
-    versionName = "1.0.16"
+    versionCode =19
+    versionName = "1.0.19"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

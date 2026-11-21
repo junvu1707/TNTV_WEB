@@ -6320,7 +6320,12 @@
             : answerObj[String(idxA + 1)];
           if (targetKeyB !== undefined) {
             const targetStr = String(targetKeyB).trim().toUpperCase();
-            matchedIdxB = colBItems.findIndex(itemB => itemB.key.toUpperCase() === targetStr || itemB.text.toUpperCase() === targetStr);
+            // Ưu tiên 1: Tìm theo key của Cột B (ví dụ "A", "B", "C", "D")
+            matchedIdxB = colBItems.findIndex(itemB => itemB.key.toUpperCase() === targetStr);
+            // Ưu tiên 2: Nếu không khớp theo key mới tìm theo nội dung text của Cột B
+            if (matchedIdxB === -1) {
+              matchedIdxB = colBItems.findIndex(itemB => itemB.text.toUpperCase() === targetStr);
+            }
           }
         }
         if (matchedIdxB === -1) {

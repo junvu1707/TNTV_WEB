@@ -16,6 +16,11 @@
         android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
         tools:node="remove" />
 
+    <!-- Khai báo tính năng màn hình dọc không bắt buộc để giải phóng hạn chế Google Play Console trên Tablet/Desktop/XR -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:hardwareAccelerated="true"
@@ -66,7 +71,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:screenOrientation="portrait"
+            android:screenOrientation="sensorPortrait"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize|density|uiMode"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MyApplication">
