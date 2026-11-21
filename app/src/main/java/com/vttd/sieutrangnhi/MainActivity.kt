@@ -18,6 +18,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -35,7 +36,6 @@ class MainActivity : ComponentActivity() {
   private var bannerContainer: FrameLayout? = null
 
   lateinit var vipPrefs: VipPreferenceManager
-  lateinit var emailJSManager: EmailJSManager
   lateinit var billingManager: BillingManager
   lateinit var githubRepo: GitHubQuestionRepository
   lateinit var examGenerator: DynamicExamGenerator
@@ -73,17 +73,19 @@ class MainActivity : ComponentActivity() {
     adManager = AdManager(this, vipPrefs)
     vipDialogManager = VipDialogManager(this)
 
-    emailJSManager = EmailJSManager()
-    billingManager = BillingManager(this, vipPrefs, emailJSManager)
+    billingManager = BillingManager(this, vipPrefs)
     billingManager.onPurchaseSuccessCallback = { productId, level ->
       runOnUiThread {
         updateAdMobForVipStatus()
-        val userName = vipPrefs.getUserName().ifBlank { "Tài khoản VIP" }.replace("'", "\\'")
         webView?.evaluateJavascript(
-          "if (window.onVipStatusChanged) { window.onVipStatusChanged($level, '$userName'); }",
+          "if (window.onVipStatusChanged) { window.onVipStatusChanged($level, ''); }",
           null
         )
-        showVipSuccessDialog(productId, level)
+        Toast.makeText(
+          this,
+          "🎉 Kích hoạt VIP thành công! Toàn bộ 18 vòng chơi và tính năng đã mở khóa.",
+          Toast.LENGTH_LONG
+        ).show()
       }
     }
 
@@ -185,9 +187,8 @@ class MainActivity : ComponentActivity() {
           super.onPageFinished(view, url)
           Log.d(TAG, "WebView onPageFinished: $url")
           val level = vipPrefs.getVipLevel()
-          val userName = vipPrefs.getUserName().replace("'", "\\'")
           view?.evaluateJavascript(
-            "if (window.onVipStatusChanged) { window.onVipStatusChanged($level, '$userName', true); }",
+            "if (window.onVipStatusChanged) { window.onVipStatusChanged($level, '', true); }",
             null
           )
         }
@@ -275,14 +276,6 @@ class MainActivity : ComponentActivity() {
 
   fun showParentalGateDialog(onPassed: () -> Unit) {
     vipDialogManager.showParentalGateDialog(onPassed)
-  }
-
-  fun showVipRegistrationDialog(productId: String, defaultName: String = "") {
-    vipDialogManager.showVipRegistrationDialog(productId, defaultName)
-  }
-
-  fun showVipSuccessDialog(productId: String, vipLevel: Int) {
-    vipDialogManager.showVipSuccessDialog(productId, vipLevel)
   }
 
   override fun onPause() {

@@ -9,8 +9,7 @@ import com.android.billingclient.api.*
 
 class BillingManager(
   private val activity: Activity,
-  private val vipPrefs: VipPreferenceManager,
-  private val emailJSManager: EmailJSManager
+  private val vipPrefs: VipPreferenceManager
 ) : PurchasesUpdatedListener {
 
   companion object {
@@ -148,24 +147,15 @@ class BillingManager(
 
   fun launchBillingFlow(
     activity: Activity,
-    productId: String,
-    userEmail: String = "",
-    userName: String = ""
+    productId: String
   ) {
-    if (userEmail.isNotBlank()) {
-      vipPrefs.setUserEmail(userEmail)
-    }
-    if (userName.isNotBlank()) {
-      vipPrefs.setUserName(userName)
-    }
-
     val targetProductId = getPlayConsoleProductId(productId)
     val targetProductType = getProductType(targetProductId)
 
     if (!billingClient.isReady) {
       Log.w(TAG, "Billing client not ready, reconnecting...")
       startBillingConnection {
-        launchBillingFlow(activity, productId, userEmail, userName)
+        launchBillingFlow(activity, productId)
       }
       showToastOnUi("Đang kết nối dịch vụ Google Play, vui lòng thử lại sau giây lát...")
       return
@@ -266,56 +256,29 @@ class BillingManager(
     purchaseToken: String,
     isNewPurchase: Boolean = false
   ) {
-    val userEmail = vipPrefs.getUserEmail()
-    val userName = vipPrefs.getUserName()
-    val deviceId = vipPrefs.getDeviceId()
-
-    vipPrefs.saveVipPurchaseRecord(userEmail, deviceId, vipLevel)
+    vipPrefs.setVipLevel(vipLevel)
     vipPrefs.setLastOrderId(orderId)
     vipPrefs.setPurchaseToken(purchaseToken)
 
-    val vipTypeName = if (vipLevel >= 2) "Gói VIP 2 (Trọn Đời)" else "Gói VIP 1 (1 Năm)"
-
-    // Chỉ gửi Email và hiển thị Dialog kích hoạt khi đây là giao dịch vừa thanh toán mới
-    if (isNewPurchase) {
-      emailJSManager.sendVipActivationNotification(
-        userEmail = userEmail,
-        userName = userName,
-        vipType = vipTypeName,
-        deviceId = deviceId,
-        purchaseToken = purchaseToken,
-        orderId = orderId
-      ) { success ->
-        Log.d(TAG, "Automated EmailJS activation sent: $success")
-      }
-
-      activity.runOnUiThread {
-        onPurchaseSuccessCallback?.invoke(productId, vipLevel)
-      }
+    activity.runOnUiThread {
+      onPurchaseSuccessCallback?.invoke(productId, vipLevel)
     }
   }
 
   fun scanAndRestoreVip(
-    userName: String = "",
-    userEmail: String = "",
     callback: (success: Boolean, vipLevel: Int, message: String) -> Unit
   ) {
-    val inputEmail = userEmail.trim()
-    val inputName = userName.trim()
-
     if (!billingClient.isReady) {
       startBillingConnection {
-        executeScanPurchases(inputName, inputEmail, callback)
+        executeScanPurchases(callback)
       }
       return
     }
 
-    executeScanPurchases(inputName, inputEmail, callback)
+    executeScanPurchases(callback)
   }
 
   private fun executeScanPurchases(
-    inputName: String,
-    inputEmail: String,
     callback: (Boolean, Int, String) -> Unit
   ) {
     // 1. Quét sản phẩm mua một lần (INAPP - VIP 2) từ tài khoản Google Play trên thiết bị
@@ -363,10 +326,7 @@ class BillingManager(
         }
 
         if (highestLevel > VipPreferenceManager.VIP_LEVEL_0) {
-          val currentDeviceId = vipPrefs.getDeviceId()
-          val saveEmail = inputEmail.ifBlank { vipPrefs.getUserEmail() }
-          vipPrefs.saveVipPurchaseRecord(saveEmail, currentDeviceId, highestLevel)
-          if (inputName.isNotEmpty()) vipPrefs.setUserName(inputName)
+          vipPrefs.setVipLevel(highestLevel)
           if (activeToken.isNotBlank()) vipPrefs.setPurchaseToken(activeToken)
 
           // Xác nhận mua hàng nếu chưa được acknowledge

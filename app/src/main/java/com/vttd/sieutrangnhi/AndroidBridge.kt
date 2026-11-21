@@ -18,48 +18,31 @@ class AndroidBridge(
   @JavascriptInterface
   fun launchBillingFlow(productId: String) {
     val act = activity ?: return
-    act.showVipRegistrationDialog(productId, act.vipPrefs.getUserName())
-  }
-
-  @JavascriptInterface
-  fun launchBillingFlowWithInfo(productId: String, userEmail: String, userName: String) {
-    val act = activity ?: return
     act.runOnUiThread {
-      act.showParentalGateDialog {
-        act.billingManager.launchBillingFlow(act, productId, userEmail, userName)
-      }
+      act.billingManager.launchBillingFlow(act, productId)
     }
   }
 
   @JavascriptInterface
-  fun openVipPurchaseDialog(productId: String, defaultName: String) {
-    val act = activity ?: return
-    act.showVipRegistrationDialog(productId, defaultName)
+  fun launchBillingFlowWithInfo(productId: String, userEmail: String = "", userName: String = "") {
+    launchBillingFlow(productId)
+  }
+
+  @JavascriptInterface
+  fun openVipPurchaseDialog(productId: String, defaultName: String = "") {
+    launchBillingFlow(productId)
   }
 
   @JavascriptInterface
   fun restorePurchases() {
     val act = activity ?: return
     act.runOnUiThread {
-      act.billingManager.queryPurchases()
-      Toast.makeText(act, "Đã kiểm tra và đồng bộ trạng thái VIP thành công!", Toast.LENGTH_SHORT).show()
-    }
-  }
-
-  @JavascriptInterface
-  fun scanAndRestoreVip(userName: String, userEmail: String) {
-    val act = activity ?: return
-    act.runOnUiThread {
-      act.billingManager.scanAndRestoreVip(userName, userEmail) { success, vipLevel, message ->
+      act.billingManager.scanAndRestoreVip { success, vipLevel, message ->
         act.runOnUiThread {
           if (success) {
             act.updateAdMobForVipStatus()
-            val activeName = userName.ifBlank { act.vipPrefs.getUserName().ifBlank { "Tài khoản VIP" } }
-            act.vipPrefs.setUserName(activeName)
-            if (userEmail.isNotBlank()) act.vipPrefs.setUserEmail(userEmail)
-
             act.webView?.evaluateJavascript(
-              "if (window.onVipStatusChanged) { window.onVipStatusChanged($vipLevel, '$activeName'); }",
+              "if (window.onVipStatusChanged) { window.onVipStatusChanged($vipLevel, ''); }",
               null
             )
             Toast.makeText(act, "🎉 $message", Toast.LENGTH_LONG).show()
@@ -69,6 +52,11 @@ class AndroidBridge(
         }
       }
     }
+  }
+
+  @JavascriptInterface
+  fun scanAndRestoreVip(userName: String = "", userEmail: String = "") {
+    restorePurchases()
   }
 
   @JavascriptInterface
@@ -125,17 +113,17 @@ class AndroidBridge(
 
   @JavascriptInterface
   fun getDeviceId(): String {
-    return activity?.vipPrefs?.getDeviceId() ?: ""
+    return ""
   }
 
   @JavascriptInterface
   fun getUserEmail(): String {
-    return activity?.vipPrefs?.getUserEmail() ?: ""
+    return ""
   }
 
   @JavascriptInterface
   fun getUserName(): String {
-    return activity?.vipPrefs?.getUserName() ?: ""
+    return ""
   }
 
   @JavascriptInterface
@@ -151,9 +139,6 @@ class AndroidBridge(
       put("isVip", act.vipPrefs.isVip())
       put("isVip1", act.vipPrefs.getVipLevel() == VipPreferenceManager.VIP_LEVEL_1)
       put("isVip2", act.vipPrefs.getVipLevel() == VipPreferenceManager.VIP_LEVEL_2)
-      put("deviceId", act.vipPrefs.getDeviceId())
-      put("userName", act.vipPrefs.getUserName())
-      put("userEmail", act.vipPrefs.getUserEmail())
       put("lastOrderId", act.vipPrefs.getLastOrderId())
     }
     return json.toString()
