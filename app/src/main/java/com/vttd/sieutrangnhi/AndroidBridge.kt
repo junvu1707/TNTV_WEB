@@ -87,9 +87,9 @@ class AndroidBridge(
     val act = activity ?: return
     act.chibiManager.fetchAndCacheChibis { jsonStr ->
       act.runOnUiThread {
-        val safeJson = jsonStr.replace("'", "\\'").replace("\n", " ")
+        val safeJson = JSONObject.quote(jsonStr)
         webViewProvider()?.evaluateJavascript(
-          "if (window.onGithubChibisUpdated) { window.onGithubChibisUpdated('$safeJson'); }",
+          "if (window.onGithubChibisUpdated) { window.onGithubChibisUpdated($safeJson); }",
           null
         )
       }
@@ -249,9 +249,9 @@ class AndroidBridge(
     val act = activity ?: return
     act.githubRepo.syncRepoQuestions(forceRefresh = force) { success, message ->
       act.runOnUiThread {
-        val safeMsg = message.replace("'", "\\'").replace("\n", " ")
+        val safeMsg = JSONObject.quote(message)
         webViewProvider()?.evaluateJavascript(
-          "if (window.onGithubSyncCompleted) { window.onGithubSyncCompleted($success, '$safeMsg'); }",
+          "if (window.onGithubSyncCompleted) { window.onGithubSyncCompleted($success, $safeMsg); }",
           null
         )
       }

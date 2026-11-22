@@ -7,6 +7,9 @@ import androidx.core.content.edit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -239,17 +242,24 @@ class GitHubQuestionRepository(private val context: Context) {
 
         var updatedCount = 0
 
-        // Quét và tải trực tiếp 20 bộ đề chuẩn theo Direct Raw URL (5 Lớp x 4 Round)
-        for (g in 1..5) {
-          for (r in 1..4) {
-            val url = getDirectRawUrl(g, r)
-            val jsonStr = downloadRawJson(url)
-            if (isValidJson(jsonStr)) {
-              getCacheFile(g, r).writeText(jsonStr!!)
-              updatedCount++
-              Log.d(TAG, "[GitHub] Đồng bộ thành công đề Lớp $g Round $r từ GitHub")
+        // Quét và tải song song 20 bộ đề chuẩn theo Direct Raw URL (5 Lớp x 4 Round)
+        coroutineScope {
+          val deferreds = (1..5).flatMap { g ->
+            (1..4).map { r ->
+              async {
+                val url = getDirectRawUrl(g, r)
+                val jsonStr = downloadRawJson(url)
+                if (isValidJson(jsonStr)) {
+                  getCacheFile(g, r).writeText(jsonStr!!)
+                  Log.d(TAG, "[GitHub] Đồng bộ thành công đề Lớp $g Round $r từ GitHub")
+                  true
+                } else {
+                  false
+                }
+              }
             }
           }
+          updatedCount = deferreds.awaitAll().count { it }
         }
 
         if (latestSha.isNotBlank()) {
