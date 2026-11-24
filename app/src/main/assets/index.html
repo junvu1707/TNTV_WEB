@@ -7,6 +7,9 @@
   <!-- Tailwind CSS & Lucide Icons (CDN + Local Fallback) -->
   <script src="https://cdn.tailwindcss.com" onerror="this.onerror=null; this.src='tailwindcss.js';"></script>
   <script src="https://unpkg.com/lucide@latest" onerror="this.onerror=null; this.src='lucide.min.js';"></script>
+  <!-- Firebase JS SDK (Realtime Database & Single-Session Control) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -1203,6 +1206,171 @@
     { card: "border-indigo-500 bg-indigo-100 text-indigo-950 ring-2 ring-indigo-300", badge: "bg-indigo-600 text-white" },
     { card: "border-red-500 bg-red-100 text-red-950 ring-2 ring-red-300", badge: "bg-red-600 text-white" }
   ];
+
+  // ==========================================
+  // [FIREBASE REALTIME DATABASE & QUẢN LÝ ĐĂNG NHẬP 1 MÁY 1 LÚC]
+  // ==========================================
+  const FIREBASE_CONFIG = {
+    databaseURL: "https://sieutrangnhi-default-rtdb.firebaseio.com"
+  };
+
+  let firebaseDb = null;
+  let activeSessionRef = null;
+  let currentSessionToken = null;
+
+  function initFirebase() {
+    try {
+      if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        firebaseDb = firebase.database();
+      } else if (typeof firebase !== 'undefined' && firebase.apps.length) {
+        firebaseDb = firebase.database();
+      }
+    } catch (e) {
+      console.warn('Firebase init:', e);
+    }
+  }
+
+  function registerUserSession(accountId) {
+    initFirebase();
+    const cleanId = String(accountId || '').toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+    if (!cleanId) return;
+
+    currentSessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('TRANG_NHI_SESSION_TOKEN', currentSessionToken);
+
+    if (window.BroadcastChannel) {
+      try {
+        if (window._sessionChannel) window._sessionChannel.close();
+        window._sessionChannel = new BroadcastChannel('tntv_session_' + cleanId);
+        window._sessionChannel.postMessage({ type: 'LOGIN', sessionToken: currentSessionToken });
+        window._sessionChannel.onmessage = (event) => {
+          if (event.data && event.data.type === 'LOGIN' && event.data.sessionToken !== currentSessionToken) {
+            handleForcedLogoutDueToNewSession(accountId);
+          }
+        };
+      } catch (_) {}
+    }
+
+    if (firebaseDb) {
+      try {
+        const sessPath = 'user_sessions/' + cleanId;
+        activeSessionRef = firebaseDb.ref(sessPath);
+
+        activeSessionRef.set({
+          activeSessionToken: currentSessionToken,
+          lastActiveTimestamp: Date.now(),
+          userAgent: navigator.userAgent
+        });
+
+        activeSessionRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data && data.activeSessionToken && data.activeSessionToken !== currentSessionToken) {
+            handleForcedLogoutDueToNewSession(accountId);
+          }
+        });
+      } catch (e) {
+        console.warn('Lỗi ghi Firebase Session:', e);
+      }
+    }
+  }
+
+  function unregisterUserSession(accountId) {
+    if (activeSessionRef) {
+      try {
+        activeSessionRef.off();
+        activeSessionRef = null;
+      } catch (_) {}
+    }
+    if (window._sessionChannel) {
+      try {
+        window._sessionChannel.close();
+        window._sessionChannel = null;
+      } catch (_) {}
+    }
+    localStorage.removeItem('TRANG_NHI_SESSION_TOKEN');
+  }
+
+  function sendViolationEmailToAdmin(accountId) {
+    const accIdUpper = String(accountId || '').toUpperCase();
+    const timeStr = new Date().toLocaleString('vi-VN');
+    const userAgentStr = navigator.userAgent;
+
+    // 1. Ghi nhật ký vi phạm lên Firebase Realtime Database tại node 'violations'
+    if (firebaseDb) {
+      try {
+        const cleanId = String(accountId || '').toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+        firebaseDb.ref('violations/' + cleanId + '/' + Date.now()).set({
+          accountId: accIdUpper,
+          timestamp: Date.now(),
+          timeFormatted: timeStr,
+          userAgent: userAgentStr,
+          adminEmail: 'junvu1707@gmail.com',
+          reason: 'Phát hiện đăng nhập tài khoản đồng thời trên 2 thiết bị/trình duyệt khác nhau.'
+        });
+      } catch (e) {
+        console.warn('Lỗi ghi Firebase violation:', e);
+      }
+    }
+
+    // 2. Gửi Email thông báo trực tiếp về junvu1707@gmail.com
+    try {
+      const payload = {
+        email: 'junvu1707@gmail.com',
+        _replyto: 'junvu1707@gmail.com',
+        _subject: '⚠️ CANH BAO VI PHAM: Tai khoan ' + accIdUpper + ' dang nhap tren 2 thiet bi',
+        accountId: accIdUpper,
+        time: timeStr,
+        device: userAgentStr,
+        message: `Hệ thống Siêu Trạng Nhí Tiếng Việt phát hiện vi phạm đăng nhập:\n\n• Mã ID vi phạm: ${accIdUpper}\n• Thời gian phát hiện: ${timeStr}\n• Trình duyệt/Thiết bị: ${userAgentStr}\n• Email quản trị nhận: junvu1707@gmail.com`
+      };
+
+      fetch('https://formspree.io/f/xbjnqvlw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('Lỗi gửi email vi phạm:', e);
+    }
+  }
+
+  function handleForcedLogoutDueToNewSession(accountId) {
+    if (!AppState.loggedInAccount) return;
+
+    const accIdUpper = String(accountId || '').toUpperCase();
+
+    // 1. Gửi email thông tin ID vi phạm về mail junvu1707@gmail.com
+    sendViolationEmailToAdmin(accountId);
+
+    // 2. Tắt lắng nghe session
+    unregisterUserSession(accountId);
+
+    // 3. Đăng xuất tài khoản khỏi máy cũ
+    AppState.loggedInAccount = null;
+    AppState.lockedToGrade = null;
+    AppState.studentName = 'Siêu Trạng Nhí';
+    AppState.customAccountId = '';
+    AppState.isAdmin = false;
+    AppState.isVip1 = false;
+    AppState.isVip2 = false;
+    savePersistedState();
+
+    closeModal();
+    updateHeaderUI();
+    renderLoginGate();
+
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
+      SoundEngine.playClick();
+    }
+
+    // 4. Hiển thị thông báo theo đúng mẫu yêu cầu
+    showCustomAlert(
+      `TÀI KHOẢN ĐÃ ĐƯỢC ĐĂNG NHẬP TRÊN THIẾT BỊ KHÁC!\n\n` +
+      `Tài khoản ${accIdUpper} vừa được đăng nhập trên một trình duyệt hoặc thiết bị khác. Vui lòng chỉ đăng nhập trên 1 thiết bị. Nếu vi phạm chúng tôi sẽ khóa tài khoản.`,
+      '⚠️ CẢNH BÁO VI PHẠM'
+    );
+  }
 
   function formatDateVN(timestamp) {
     if (!timestamp) return '';
@@ -4890,7 +5058,7 @@
     const rawPass = (passInput || '').trim();
 
     if (!rawId) {
-      showCustomAlert('Vui lòng nhập Mã ID! (Ví dụ: l1_001 cho Lớp 1, l2_001 cho Lớp 2)', 'Lỗi Đăng Nhập');
+      showCustomAlert('Vui lòng nhập Mã ID! (Ví dụ: l1_001 cho Lớp 1, vip2_001 cho 5 Lớp)', 'Lỗi Đăng Nhập');
       return false;
     }
 
@@ -4902,47 +5070,51 @@
     const lowerId = rawId.toLowerCase();
     const lowerPass = rawPass.toLowerCase();
 
-    // Kiểm tra Admin
-    if (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310') {
+    // 1. Kiểm tra Admin & VIP 2 Trọn Đời (Mở cả 5 Khối Lớp)
+    if (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310' || lowerId.startsWith('vip2_') || lowerId === 'vip_5lap') {
       if (lowerPass === 'kdepass' || lowerPass === 'adminpass' || lowerPass === 'vudung177.' || lowerPass === 'apptest' || lowerPass === 'uyenlp1310') {
-        AppState.isAdmin = true;
+        AppState.isAdmin = (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310');
         AppState.isVip1 = true;
         AppState.isVip2 = true;
         AppState.studentName = rawId.toUpperCase();
         AppState.customAccountId = rawId.toUpperCase();
-        AppState.lockedToGrade = null;
+        AppState.lockedToGrade = null; // VIP 2: Xem được toàn bộ 5 khối lớp!
         AppState.loggedInAccount = {
           id: rawId.toUpperCase(),
           grade: AppState.selectedGrade || 1,
-          isAdmin: true,
+          isVip2: true,
           firstLoginTimestamp: Date.now(),
           expiryTimestamp: Date.now() + (3650 * 24 * 60 * 60 * 1000)
         };
         savePersistedState();
+        registerUserSession(rawId);
+
         if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) SoundEngine.playFanfare();
         closeModal();
         updateHeaderUI();
         renderHome();
-        showCustomAlert(`🎉 Đăng nhập Admin ${rawId.toUpperCase()} thành công! Bạn có toàn quyền xem tất cả 5 khối lớp và 18 vòng thi.`);
+        showCustomAlert(
+          `🎉 ĐĂNG NHẬP VIP 2 TRỌN ĐỜI THÀNH CÔNG!\n\n` +
+          `👤 Tài khoản: ${rawId.toUpperCase()}\n` +
+          `📚 Mở khóa TRỌN ĐỜI toàn bộ 5 Khối Lớp (Lớp 1 - Lớp 5) và 18 vòng thi!\n` +
+          `🛡️ Hệ thống tự động kiểm soát đăng nhập 1 máy tại 1 thời điểm.`,
+          'Chào Mừng VIP 2!'
+        );
         return true;
       }
     }
 
-    // Kiểm tra định dạng ID: l1_001 tới l5_99999
+    // 2. Kiểm tra định dạng ID VIP 1 (1 Khối Lớp - 1 Năm): l1_001 tới l5_99999
     const idRegex = /^l([1-5])_(\d{1,5})$/i;
     const match = lowerId.match(idRegex);
 
     if (!match) {
       showCustomAlert(
         `❌ Mã ID không đúng định dạng!\n\n` +
-        `📌 Quy tắc ID: l<khối_lớp>_<số_thứ_tự>\n` +
-        `Ví dụ hợp lệ:\n` +
-        `• l1_001 (Lớp 1 - Số 001)\n` +
-        `• l2_00001 (Lớp 2 - Số 00001)\n` +
-        `• l3_050 (Lớp 3 - Số 050)\n` +
-        `• l4_99999 (Lớp 4 - Số 99999)\n` +
-        `• l5_100 (Lớp 5 - Số 100)\n\n` +
-        `Mỗi lớp đánh số từ 00001 đến 99999.`,
+        `📌 Cấu trúc Mã ID:\n` +
+        `• Gói VIP 1 (1 Lớp): l<khối_lớp>_<số_thứ_tự> (Ví dụ: l1_001, l2_005, l3_100, l4_99999...)\n` +
+        `• Gói VIP 2 (5 Lớp): vip2_001 đến vip2_99999\n\n` +
+        `Mật khẩu mặc định: kdepass`,
         'ID Không Hợp Lệ'
       );
       return false;
@@ -5005,9 +5177,13 @@
     AppState.studentName = acc.id.toUpperCase();
     AppState.customAccountId = acc.id.toUpperCase();
     AppState.isVip1 = true;
+    AppState.isVip2 = false;
     AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
 
     savePersistedState();
+
+    // Đăng ký phiên đăng nhập kiểm soát 1 máy 1 lúc trên Firebase
+    registerUserSession(lowerId);
 
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) {
       SoundEngine.playFanfare();
@@ -5019,11 +5195,11 @@
 
     const daysLeft = Math.max(0, Math.ceil((acc.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)));
     showCustomAlert(
-      `🎉 ĐĂNG NHẬP THÀNH CÔNG!\n\n` +
+      `🎉 ĐĂNG NHẬP VIP 1 THÀNH CÔNG!\n\n` +
       `👤 Mã ID: ${acc.id.toUpperCase()}\n` +
-      `📚 Mở khóa duy nhất: LỚP ${assignedGrade}\n` +
+      `📚 Mở khóa duy nhất: LỚP ${assignedGrade} (18 Vòng Thi)\n` +
       `⏳ Thời hạn sử dụng: 1 NĂM (${daysLeft} ngày còn lại)\n` +
-      `📅 Bắt đầu tính từ: ${formatDateVN(acc.firstLoginTimestamp)}`,
+      `🛡️ Kiểm soát đăng nhập 1 máy tại 1 thời điểm.`,
       'Chào Mừng Trạng Nhí!'
     );
     return true;
@@ -5036,14 +5212,20 @@
     showCustomConfirm(
       'Bạn có chắc chắn muốn đăng xuất tài khoản hiện tại?',
       () => {
+        if (AppState.loggedInAccount && AppState.loggedInAccount.id) {
+          unregisterUserSession(AppState.loggedInAccount.id);
+        }
         AppState.loggedInAccount = null;
         AppState.lockedToGrade = null;
         AppState.studentName = 'Siêu Trạng Nhí';
         AppState.customAccountId = '';
         AppState.isAdmin = false;
+        AppState.isVip1 = false;
+        AppState.isVip2 = false;
         savePersistedState();
+        closeModal();
         updateHeaderUI();
-        renderHome();
+        renderLoginGate();
         showCustomAlert('Đã đăng xuất tài khoản thành công!');
       },
       null,
@@ -9886,13 +10068,13 @@
   }
 
   function openVipModal() {
-    SoundEngine.playClick();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
     const modalContainer = document.getElementById('modal-container');
 
     modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-white border-4 border-amber-400 relative shadow-2xl">
-          <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1">
+      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-white border-4 border-amber-400 relative shadow-2xl rounded-3xl">
+          <button onclick="closeModal()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
@@ -9900,56 +10082,50 @@
             <div class="w-14 h-14 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-2 text-3xl shadow border-2 border-yellow-200 animate-bounce">
               👑
             </div>
-            <h3 class="text-lg font-black text-amber-950 uppercase tracking-tight">NÂNG CẤP TÀI KHOẢN VIP</h3>
-            <p class="text-xs text-slate-500 font-semibold mt-0.5">Trải nghiệm học tập & ôn luyện đỉnh cao không giới hạn</p>
+            <h3 class="text-lg font-black text-amber-950 uppercase tracking-tight">CÁC GÓI TÀI KHOẢN HỌC TẬP</h3>
+            <p class="text-xs text-slate-500 font-semibold mt-0.5">Hệ thống phân quyền Web chuẩn GDPT 2018</p>
           </div>
 
           <div class="space-y-3 mb-4">
             <!-- Gói VIP 1 -->
-            <div class="p-3.5 rounded-2xl border-2 ${AppState.isVip1 && !AppState.isVip2 ? 'border-amber-500 bg-amber-50/70' : 'border-amber-200 bg-white hover:border-amber-400'} transition-all">
+            <div class="p-3.5 rounded-2xl border-2 ${AppState.isVip1 && !AppState.isVip2 ? 'border-amber-500 bg-amber-50/70' : 'border-amber-200 bg-white'} transition-all">
               <div class="flex items-center justify-between mb-1.5">
                 <div class="flex items-center gap-1.5 font-black text-amber-950 text-sm">
-                  <span>⭐</span> Gói VIP 1 (Học Kì)
+                  <span>⭐</span> Gói VIP 1 (1 Khối Lớp - 1 Năm)
                 </div>
-                <span class="font-black text-red-600 text-sm">49.000đ</span>
+                <span class="font-black text-amber-800 text-xs bg-amber-100 px-2 py-0.5 rounded-full">ID l1_001...</span>
               </div>
-              <ul class="text-[11px] text-slate-600 space-y-1 mb-2.5">
-                <li class="flex items-center gap-1">✓ Mở khóa toàn bộ 18 vòng thi trong 1 năm (từ khi đăng ký)</li>
-                <li class="flex items-center gap-1">✓ Xem lời giải chi tiết và mẹo làm bài chuẩn tất cả các đề</li>
+              <ul class="text-[11.5px] text-slate-600 space-y-1 mb-2">
+                <li class="flex items-center gap-1">✓ Mở khóa toàn bộ 18 vòng thi của 1 khối lớp trong 1 năm</li>
+                <li class="flex items-center gap-1">✓ 100% Không có quảng cáo làm gián đoạn</li>
+                <li class="flex items-center gap-1">✓ Tự động kiểm soát đăng nhập 1 máy 1 lúc qua Firebase</li>
               </ul>
-              <button onclick="simulateBuyVip('vip1')" class="btn-3d w-full py-2 rounded-xl text-white font-black text-xs ${AppState.isVip1 ? 'bg-slate-400 cursor-not-allowed' : 'btn-3d-red'}">
-                ${AppState.isVip1 ? 'Đã kích hoạt VIP 1 ✓' : 'Kích Hoạt VIP 1 (49.000đ)'}
-              </button>
             </div>
 
-            <!-- Gói VIP 2 Trọn Đời -->
-            <div class="p-3.5 rounded-2xl border-2 border-red-500 bg-gradient-to-r from-red-50 via-amber-50 to-yellow-50 relative overflow-hidden shadow-sm">
+            <!-- Gói VIP 2 Trọn Đời (5 Khối Lớp) -->
+            <div class="p-3.5 rounded-2xl border-2 border-red-500 bg-gradient-to-r from-red-50 via-amber-50 to-yellow-50 relative overflow-hidden shadow-xs">
               <div class="absolute top-0 right-0 bg-red-600 text-white font-black text-[9px] px-2 py-0.5 rounded-bl-lg uppercase">
-                Ưu đãi nhất
+                Ưu đãi cao nhất
               </div>
               <div class="flex items-center justify-between mb-1.5">
                 <div class="flex items-center gap-1.5 font-black text-red-950 text-sm">
-                  <span>👑</span> Gói VIP 2 (Trọn Đời)
+                  <span>👑</span> Gói VIP 2 (Trọn Đời 5 Lớp)
                 </div>
-                <span class="font-black text-red-700 text-base">99.000đ</span>
+                <span class="font-black text-red-700 text-xs bg-red-100 px-2 py-0.5 rounded-full">TRỌN ĐỜI</span>
               </div>
-              <ul class="text-[11px] text-slate-700 space-y-1 mb-2.5 font-medium">
-                <li class="flex items-center gap-1 font-bold text-red-800">✓ TẤT CẢ quyền lợi của VIP 1</li>
-                <li class="flex items-center gap-1 font-bold text-emerald-800">✓ TẮT HOÀN TOÀN 100% QUẢNG CÁO</li>
-                <li class="flex items-center gap-1 font-bold text-amber-900">✓ Tự động cập nhật ngân hàng câu hỏi mới miễn phí</li>
-                <li class="flex items-center gap-1">✓ Sử dụng trọn đời không gia hạn</li>
+              <ul class="text-[11.5px] text-slate-700 space-y-1 mb-2.5 font-medium">
+                <li class="flex items-center gap-1 font-bold text-red-800">✓ MỞ KHÓA TRỌN ĐỜI TOÀN BỘ 5 KHỐI LỚP (Lớp 1 - 5)</li>
+                <li class="flex items-center gap-1 font-bold text-emerald-800">✓ 100% Không quảng cáo, cập nhật đề mới miễn phí</li>
+                <li class="flex items-center gap-1">✓ Sử dụng trọn đời không cần gia hạn hàng năm</li>
               </ul>
-              <button onclick="simulateBuyVip('vip2')" class="btn-3d btn-3d-green w-full py-2.5 rounded-xl text-white font-black text-xs shadow-md">
-                ${AppState.isVip2 ? 'Đang sở hữu gói VIP Trọn Đời ✓' : 'Nâng Cấp Trọn Đời (99.000đ)'}
+              <button onclick="upgradeToVip2Web()" class="btn-3d btn-3d-gold w-full py-2.5 rounded-xl text-amber-950 font-black text-xs shadow-md">
+                ${AppState.isVip2 ? 'Đang sở hữu VIP 2 Trọn Đời (5 Lớp) ✓' : 'Kích Hoạt VIP 2 Trọn Đời (5 Lớp)'}
               </button>
             </div>
           </div>
 
-          <div class="pt-2.5 border-t border-amber-200 flex items-center justify-between text-xs">
-            <button onclick="openAccountModal()" class="text-slate-500 hover:text-slate-800 font-bold underline">
-              Nhập mã kích hoạt / ID
-            </button>
-            <button onclick="closeModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">
+          <div class="pt-2 border-t border-amber-200 flex justify-end">
+            <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs">
               Đóng
             </button>
           </div>
@@ -9959,164 +10135,58 @@
     safeCreateIcons();
   }
 
-  function simulateBuyVip(packageCode) {
-    if (window.AndroidBridge && typeof window.AndroidBridge.openVipPurchaseDialog === 'function') {
-      window.AndroidBridge.openVipPurchaseDialog(packageCode, AppState.customAccountId || AppState.studentName || 'Tài khoản VIP');
-      closeModal();
-      return;
-    } else if (window.AndroidBridge && typeof window.AndroidBridge.launchBillingFlow === 'function') {
-      window.AndroidBridge.launchBillingFlow(packageCode);
-    }
-    if (packageCode === 'vip2' || packageCode === 'all') {
-      AppState.isVip1 = true;
-      AppState.isVip2 = true;
-      if (window.AndroidBridge && typeof window.AndroidBridge.setBannerVisible === 'function') {
-        window.AndroidBridge.setBannerVisible(false);
-      }
+  function upgradeToVip2Web() {
+    AppState.isVip1 = true;
+    AppState.isVip2 = true;
+    AppState.lockedToGrade = null;
+    if (AppState.loggedInAccount) {
+      AppState.loggedInAccount.isVip2 = true;
+      AppState.loggedInAccount.grade = AppState.selectedGrade;
     } else {
-      AppState.isVip1 = true;
-      AppState.vip1ExpiryTimestamp = Date.now() + (365 * 24 * 60 * 60 * 1000);
-    }
-    if (!AppState.customAccountId || AppState.customAccountId === 'Siêu Trạng Nhí' || AppState.customAccountId === 'Công chúa tóc mây') {
-      AppState.studentName = 'Tài khoản VIP';
-      AppState.customAccountId = 'Tài khoản VIP';
+      AppState.loggedInAccount = {
+        id: 'VIP2_MEMBER',
+        grade: AppState.selectedGrade,
+        isVip2: true,
+        firstLoginTimestamp: Date.now(),
+        expiryTimestamp: Date.now() + (3650 * 24 * 60 * 60 * 1000)
+      };
     }
     savePersistedState();
-    SoundEngine.playFanfare();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) SoundEngine.playFanfare();
     closeModal();
     updateHeaderUI();
-    showCustomAlert('🎉 Chúc mừng bạn đã nâng cấp VIP thành công! Toàn bộ 18 vòng và 1000 bộ đề thi đã được kích hoạt.');
     renderHome();
+    showCustomAlert('🎉 Chúc mừng bạn đã nâng cấp thành công gói VIP 2 Trọn Đời! Toàn bộ 5 khối Lớp (Lớp 1 đến Lớp 5) đã được mở khóa trọn đời.');
   }
-
-  window.onVipStatusChanged = function(vipLevel, userName, isSilent = false) {
-    if (vipLevel >= 2) {
-      AppState.isVip1 = true;
-      AppState.isVip2 = true;
-      if (window.AndroidBridge && typeof window.AndroidBridge.setBannerVisible === 'function') {
-        window.AndroidBridge.setBannerVisible(false);
-      }
-    } else if (vipLevel >= 1) {
-      AppState.isVip1 = true;
-    }
-
-    let accName = userName;
-    if (!accName && window.AndroidBridge && typeof window.AndroidBridge.getUserName === 'function') {
-      accName = window.AndroidBridge.getUserName();
-    }
-
-    if (accName && accName.trim() && accName.trim() !== 'Siêu Trạng Nhí' && accName.trim() !== 'Công chúa tóc mây') {
-      AppState.studentName = accName.trim();
-      AppState.customAccountId = accName.trim();
-    } else {
-      if (!AppState.customAccountId || AppState.customAccountId === 'Siêu Trạng Nhí' || AppState.customAccountId === 'Công chúa tóc mây') {
-        if (AppState.isVip1 || AppState.isVip2) {
-          AppState.studentName = 'Tài khoản VIP';
-          AppState.customAccountId = 'Tài khoản VIP';
-        }
-      }
-    }
-
-    savePersistedState();
-    if (!isSilent && typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare && vipLevel >= 1) {
-      SoundEngine.playFanfare();
-    }
-    updateHeaderUI();
-    if (typeof renderHome === 'function') {
-      renderHome();
-    }
-  };
-
-
-  // ==========================================
-  // [GOOGLE ADMOB INTEGRATION & BRIDGES]
-  // ==========================================
-  window._interstitialPendingCallback = null;
 
   function showInterstitialAd(onClosed) {
-    if (AppState.isVip2) {
-      if (typeof onClosed === 'function') onClosed();
-      return;
-    }
-    window._interstitialPendingCallback = onClosed;
-    if (window.AndroidBridge && typeof window.AndroidBridge.requestInterstitialAd === 'function') {
-      window.AndroidBridge.requestInterstitialAd();
-    } else {
-      runWebFallbackInterstitial(onClosed);
-    }
+    if (typeof onClosed === 'function') onClosed();
   }
-
-  window.onInterstitialAdClosed = function() {
-    const cb = window._interstitialPendingCallback;
-    window._interstitialPendingCallback = null;
-    closeModal();
-    if (typeof cb === 'function') cb();
-  };
-
-  function runWebFallbackInterstitial(onClosed) {
-    const modalContainer = document.getElementById('modal-container');
-    let countdown = 3;
-
-    modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-5 text-center relative overflow-hidden shadow-2xl border-2 border-amber-300">
-          <div class="text-xs uppercase tracking-wider text-slate-400 font-black mb-1">GOOGLE ADMOB • QUẢNG CÁO XEN KẼ</div>
-          <div class="h-32 bg-gradient-to-tr from-amber-400 to-red-500 rounded-xl flex flex-col items-center justify-center text-white p-3 shadow-inner">
-            <span class="text-3xl mb-1">🎓</span>
-            <span class="font-black text-sm">Siêu Trạng Nhí Tiếng Việt</span>
-            <span class="text-[11px] opacity-90 mt-0.5">Tiếp sức tri thức Việt 2026</span>
-          </div>
-          <p class="text-xs text-slate-600 mt-3 font-semibold">Bé đã hoàn thành xuất sắc chặng thi vừa rồi!</p>
-          <button id="btn-close-interstitial" disabled class="mt-4 w-full py-2.5 rounded-xl font-black text-sm bg-slate-200 text-slate-500 transition-all">
-            Đóng quảng cáo sau (${countdown}s)
-          </button>
-        </div>
-      </div>
-    `;
-
-    const btn = document.getElementById('btn-close-interstitial');
-    const timer = setInterval(() => {
-      countdown--;
-      if (countdown > 0) {
-        if (btn) btn.textContent = `Đóng quảng cáo sau (${countdown}s)`;
-      } else {
-        clearInterval(timer);
-        if (btn) {
-          btn.disabled = false;
-          btn.className = 'btn-3d btn-3d-red mt-4 w-full py-2.5 rounded-xl font-black text-sm text-white';
-          btn.textContent = 'Tiếp Tục Làm Bài ➔';
-          btn.onclick = () => {
-            closeModal();
-            if (typeof onClosed === 'function') onClosed();
-          };
-        }
-      }
-    }, 1000);
-  }
-
-  // --- REWARDED VIDEO ADS ---
 
   function startRewardedAdForRound(roundNum) {
-    if (window.AndroidBridge && typeof window.AndroidBridge.requestRewardedAd === 'function') {
-      window.AndroidBridge.requestRewardedAd('round', roundNum);
-    } else {
-      runWebFallbackRewarded('round', roundNum);
-    }
+    startRoundExam(roundNum);
   }
 
   function watchRewardedAdForStars(amount = 30) {
-    if (window.AndroidBridge && typeof window.AndroidBridge.requestRewardedAd === 'function') {
-      window.AndroidBridge.requestRewardedAd('stars', amount);
-    } else {
-      runWebFallbackRewarded('stars', amount);
-    }
+    AppState.stars = (AppState.stars || 0) + amount;
+    savePersistedState();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playSuccess) SoundEngine.playSuccess();
+    updateHeaderUI();
+    showCustomAlert(`🎉 Bạn đã nhận thêm +${amount} ⭐ Thưởng vào Tủ Đồ Chibi!`);
   }
 
   function watchRewardedAdForExplanation() {
-    if (window.AndroidBridge && typeof window.AndroidBridge.requestRewardedAd === 'function') {
-      window.AndroidBridge.requestRewardedAd('explanation', 1);
-    } else {
-      runWebFallbackRewarded('explanation', 1);
+    AppState.isVip1 = true;
+    savePersistedState();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playSuccess) SoundEngine.playSuccess();
+    finishRoundExam();
+  }
+
+  function runWebFallbackRewarded(rewardType, targetId) {
+    if (typeof window.onRewardedAdSuccess === 'function') {
+      window.onRewardedAdSuccess(rewardType, targetId);
+    }
+  }
     }
   }
 
