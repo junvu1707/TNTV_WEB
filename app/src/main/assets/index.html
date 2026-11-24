@@ -1478,21 +1478,27 @@
         AppState.vip1ExpiryTimestamp = d.vip1ExpiryTimestamp || 0;
 
         // Khôi phục tài khoản đã đăng nhập
-        if (d.loggedInAccount) {
+        if (d.loggedInAccount && typeof d.loggedInAccount === 'object' && d.loggedInAccount.id) {
           AppState.loggedInAccount = d.loggedInAccount;
           if (AppState.loggedInAccount.expiryTimestamp && Date.now() > AppState.loggedInAccount.expiryTimestamp) {
             console.warn('Tài khoản Web ID đã hết hạn 1 năm sử dụng!');
             AppState.loggedInAccount = null;
             AppState.lockedToGrade = null;
           } else {
-            AppState.lockedToGrade = d.lockedToGrade || AppState.loggedInAccount.grade;
-            AppState.selectedGrade = AppState.lockedToGrade;
-            AppState.customAccountId = AppState.loggedInAccount.id ? AppState.loggedInAccount.id.toUpperCase() : '';
+            AppState.isVip2 = !!d.loggedInAccount.isVip2 || !!d.isVip2;
+            AppState.lockedToGrade = AppState.isVip2 ? null : (d.lockedToGrade || AppState.loggedInAccount.grade);
+            AppState.selectedGrade = AppState.lockedToGrade || d.selectedGrade || 1;
+            AppState.customAccountId = getLoggedInAccId();
             AppState.studentName = AppState.customAccountId;
             AppState.isVip1 = true;
             AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
+
+            // Tự động khôi phục kết nối kiểm tra 1 máy 1 lúc trên Firebase
+            registerUserSession(AppState.loggedInAccount.id);
           }
         } else {
+          AppState.loggedInAccount = null;
+          AppState.lockedToGrade = null;
           AppState.selectedGrade = d.selectedGrade || 1;
         }
 
@@ -4476,79 +4482,91 @@
     return !!(AppState.singlePlayTickets && AppState.singlePlayTickets[roundNum]);
   }
 
+  function getLoggedInAccId() {
+    if (AppState.loggedInAccount && typeof AppState.loggedInAccount === 'object' && AppState.loggedInAccount.id) {
+      return String(AppState.loggedInAccount.id).toUpperCase();
+    }
+    return '';
+  }
+
   function updateHeaderUI() {
-    const nameEl = document.getElementById('student-name-display');
-    const gradeEl = document.getElementById('header-grade-badge');
-    const vipEl = document.getElementById('header-vip-status');
-    const starsEl = document.getElementById('user-stars-display');
-    const soundIcon = document.getElementById('icon-sound');
-    const avatarEl = document.getElementById('header-avatar-display');
-    const headerVipBtn = document.getElementById('btn-header-vip-upgrade');
-    const headerAuthBtn = document.getElementById('btn-header-auth');
+    try {
+      const nameEl = document.getElementById('student-name-display');
+      const gradeEl = document.getElementById('header-grade-badge');
+      const vipEl = document.getElementById('header-vip-status');
+      const starsEl = document.getElementById('user-stars-display');
+      const soundIcon = document.getElementById('icon-sound');
+      const avatarEl = document.getElementById('header-avatar-display');
+      const headerVipBtn = document.getElementById('btn-header-vip-upgrade');
+      const headerAuthBtn = document.getElementById('btn-header-auth');
 
-    const accId = (AppState.customAccountId || '').trim();
-    const studentName = (AppState.studentName || '').trim();
-    const chibiName = AppState.avatarName || 'Siêu Trạng Nhí';
+      const accId = getLoggedInAccId();
+      const studentName = (AppState.studentName || '').trim();
+      const chibiName = AppState.avatarName || 'Siêu Trạng Nhí';
 
-    let displayName = accId ? accId : (studentName && studentName !== 'Siêu Trạng Nhí' && studentName !== 'Công chúa tóc mây' ? studentName : chibiName);
+      let displayName = accId ? accId : (studentName && studentName !== 'Siêu Trạng Nhí' && studentName !== 'Công chúa tóc mây' ? studentName : chibiName);
 
-    if (nameEl) nameEl.textContent = displayName;
-    if (gradeEl) gradeEl.textContent = `Lớp ${AppState.selectedGrade}`;
-    if (starsEl) starsEl.textContent = AppState.stars;
+      if (nameEl) nameEl.textContent = displayName;
+      if (gradeEl) gradeEl.textContent = `Lớp ${AppState.selectedGrade}`;
+      if (starsEl) starsEl.textContent = AppState.stars;
 
-    if (avatarEl) {
-      avatarEl.innerHTML = getCurrentAvatarHtml(40);
-    }
-
-    if (headerAuthBtn) {
-      if (AppState.loggedInAccount) {
-        headerAuthBtn.innerHTML = `
-          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
-            <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
-          </button>
-        `;
-      } else {
-        headerAuthBtn.innerHTML = `
-          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-2.5 py-1 rounded-full border border-yellow-200 shadow font-black text-xs transition-all" title="Đăng nhập tài khoản ID học sinh (l1_001...)">
-            <span>🔑 Đăng nhập</span>
-          </button>
-        `;
+      if (avatarEl) {
+        avatarEl.innerHTML = getCurrentAvatarHtml(40);
       }
-    }
 
-    if (headerVipBtn) {
-      if (AppState.isVip2 || isAdminAccount()) {
-        headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">VIP MAX</span>';
-      } else if (AppState.isVip1) {
-        headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">VIP 1</span>';
-      } else {
-        headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">Nâng cấp VIP</span>';
+      if (headerAuthBtn) {
+        if (accId) {
+          headerAuthBtn.innerHTML = `
+            <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all" title="Xem thông tin tài khoản ${accId}">
+              <span>👤 ${accId}</span>
+            </button>
+          `;
+        } else {
+          headerAuthBtn.innerHTML = `
+            <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-2.5 py-1 rounded-full border border-yellow-200 shadow font-black text-xs transition-all" title="Đăng nhập tài khoản ID học sinh (l1_001...)">
+              <span>🔑 Đăng nhập</span>
+            </button>
+          `;
+        }
       }
-    }
 
-    if (vipEl) {
-      if (isAdminAccount()) {
-        vipEl.className = 'bg-red-600 text-yellow-200 text-[11px] px-2.5 py-0.5 rounded-full font-black border border-yellow-300 shadow';
-        vipEl.textContent = 'Admin';
-      } else if (AppState.loggedInAccount) {
-        const daysLeft = Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)));
-        vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
-        vipEl.textContent = `Mở 1 Năm (${daysLeft}d)`;
-      } else if (AppState.isVip2) {
-        vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
-        vipEl.textContent = 'VIP 2';
-      } else if (AppState.isVip1) {
-        vipEl.className = 'bg-yellow-500 text-yellow-950 text-[11px] px-2 py-0.5 rounded-full font-bold';
-        vipEl.textContent = 'VIP 1';
-      } else {
-        vipEl.className = 'bg-emerald-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold';
-        vipEl.textContent = 'Chưa Đăng Nhập';
+      if (headerVipBtn) {
+        if (AppState.isVip2 || isAdminAccount()) {
+          headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">VIP MAX</span>';
+        } else if (AppState.isVip1) {
+          headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">VIP 1</span>';
+        } else {
+          headerVipBtn.innerHTML = '<span class="text-sm">👑</span><span class="text-[11px] font-extrabold hidden xs:inline sm:inline">Nâng cấp VIP</span>';
+        }
       }
-    }
 
-    if (soundIcon) {
-      soundIcon.setAttribute('data-lucide', AppState.soundEnabled ? 'volume-2' : 'volume-x');
-      safeCreateIcons();
+      if (vipEl) {
+        if (isAdminAccount()) {
+          vipEl.className = 'bg-red-600 text-yellow-200 text-[11px] px-2.5 py-0.5 rounded-full font-black border border-yellow-300 shadow';
+          vipEl.textContent = 'Admin';
+        } else if (accId) {
+          const expiryMs = (AppState.loggedInAccount && AppState.loggedInAccount.expiryTimestamp) || Date.now();
+          const daysLeft = Math.max(0, Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24)));
+          vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
+          vipEl.textContent = AppState.isVip2 ? 'VIP 2 Trọn Đời' : `Mở 1 Năm (${daysLeft}d)`;
+        } else if (AppState.isVip2) {
+          vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
+          vipEl.textContent = 'VIP 2';
+        } else if (AppState.isVip1) {
+          vipEl.className = 'bg-yellow-500 text-yellow-950 text-[11px] px-2 py-0.5 rounded-full font-bold';
+          vipEl.textContent = 'VIP 1';
+        } else {
+          vipEl.className = 'bg-emerald-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold';
+          vipEl.textContent = 'Chưa Đăng Nhập';
+        }
+      }
+
+      if (soundIcon) {
+        soundIcon.setAttribute('data-lucide', AppState.soundEnabled ? 'volume-2' : 'volume-x');
+        safeCreateIcons();
+      }
+    } catch (e) {
+      console.warn('updateHeaderUI error:', e);
     }
   }
 
@@ -6126,20 +6144,22 @@
   // [MÀN HÌNH CHÍNH & CHỌN VÒNG THI]
   // ==========================================
   function renderHome() {
-    if (!AppState.loggedInAccount && !isAdminAccount()) {
-      renderLoginGate();
-      return;
-    }
-    clearExamSessionData();
-    if (typeof currentFireworks300Cleanup === 'function') {
-      currentFireworks300Cleanup();
-    }
-    const root = document.getElementById('app-root');
-    const grade = AppState.selectedGrade;
+    try {
+      if (!getLoggedInAccId() && !isAdminAccount()) {
+        renderLoginGate();
+        return;
+      }
+      clearExamSessionData();
+      if (typeof currentFireworks300Cleanup === 'function') {
+        currentFireworks300Cleanup();
+      }
+      const root = document.getElementById('app-root');
+      if (!root) return;
+      const grade = AppState.selectedGrade || 1;
 
-    // Đảm bảo hiển thị lại Header khi ở trang chủ
-    const appHeader = document.getElementById('main-app-header');
-    if (appHeader) appHeader.style.display = 'block';
+      // Đảm bảo hiển thị lại Header khi ở trang chủ
+      const appHeader = document.getElementById('main-app-header');
+      if (appHeader) appHeader.style.display = 'block';
 
     // 2 Chế độ thi thực tế
     const roundStages = [
@@ -6261,9 +6281,9 @@
 
           <!-- Thanh 2 Nút Action: Bố trí hàng ngang gọn gàng bên dưới trên mobile, bên phải trên desktop -->
           <div class="flex flex-row items-center justify-end gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-dashed border-amber-200 sm:border-none">
-            ${AppState.loggedInAccount ? `
-              <button onclick="openAccountModal()" class="btn-3d flex-1 sm:flex-initial bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Quản lý tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
-                <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
+            ${getLoggedInAccId() ? `
+              <button onclick="openAccountModal()" class="btn-3d flex-1 sm:flex-initial bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Quản lý tài khoản ${getLoggedInAccId()}">
+                <span>👤 ${getLoggedInAccId()}</span>
               </button>
             ` : `
               <button onclick="openLoginModal()" class="btn-3d flex-1 sm:flex-initial bg-amber-400 hover:bg-amber-500 border-2 border-yellow-200 text-amber-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Đăng nhập tài khoản ID học sinh">
@@ -6278,7 +6298,7 @@
         </div>
 
         <!-- Banner nhắc đăng nhập nếu chưa đăng nhập -->
-        ${!AppState.loggedInAccount ? `
+        ${!getLoggedInAccId() ? `
           <div class="mt-3.5 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-2.5">
               <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
@@ -6295,7 +6315,7 @@
           <div class="mt-3.5 p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">
             <div class="flex items-center gap-2">
               <span class="text-base">✅</span>
-              <span>Tài khoản <b>${AppState.loggedInAccount.id.toUpperCase()}</b> đã kích hoạt mở khóa <b>LỚP ${AppState.lockedToGrade}</b> trong vòng 1 năm (Còn <b>${Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)))} ngày</b>)</span>
+              <span>Tài khoản <b>${getLoggedInAccId()}</b> đã kích hoạt mở khóa <b>${AppState.isVip2 ? 'TOÀN BỘ 5 KHỐI LỚP' : 'LỚP ' + (AppState.lockedToGrade || AppState.selectedGrade)}</b> ${AppState.isVip2 ? 'trọn đời' : 'trong vòng 1 năm'}</span>
             </div>
             <button onclick="openAccountModal()" class="text-emerald-800 font-extrabold underline hover:text-emerald-900 shrink-0">
               Chi tiết tài khoản ➔
@@ -6359,8 +6379,11 @@
 
     safeCreateIcons();
     updateHeaderUI();
+  } catch (e) {
+    console.error('Error in renderHome:', e);
+    renderLoginGate();
   }
-  }
+}
 
   function openDisclaimerModal() {
     SoundEngine.playClick();
