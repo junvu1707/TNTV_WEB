@@ -193,43 +193,6 @@
 <body class="min-h-screen text-slate-800 flex flex-col font-sans">
 
   <!-- ======================================================== -->
-  <!-- MÀN HÌNH CHÀO (SPLASH SCREEN) KHI BẮT ĐẦU VÀO APP -->
-  <!-- ======================================================== -->
-  <div id="app-splash-screen" onclick="dismissSplashScreen()" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 select-none cursor-pointer" style="background-color: #F8FCF5; transition: opacity 0.5s ease, transform 0.5s ease;">
-    <!-- Nền vân mây trống đồng nhẹ -->
-    <div class="dong-son-pattern absolute inset-0 pointer-events-none opacity-25"></div>
-
-    <div class="relative z-10 flex flex-col items-center justify-center w-full max-w-sm text-center" onclick="event.stopPropagation(); dismissSplashScreen();">
-      <!-- HÌNH TRÒN LOGO CHIẾM 75% CHIỀU NGANG MÀN HÌNH (75vw) -->
-      <div class="relative w-[75vw] max-w-[340px] aspect-square rounded-full p-2.5 bg-white shadow-2xl border-4 border-[#C8E6C9] flex items-center justify-center mb-6 transform animate-bounce-subtle">
-        <div class="w-full h-full rounded-full overflow-hidden shadow-inner flex items-center justify-center bg-white">
-          <img src="app_logo.png" alt="Logo Siêu Trạng Nhí Tiếng Việt" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
-        </div>
-        <!-- Vòng hào quang nhẹ bao quanh -->
-        <div class="absolute -inset-1 rounded-full border-2 border-emerald-500/30 pointer-events-none animate-pulse"></div>
-      </div>
-
-      <!-- TÊN ỨNG DỤNG & LỜI CHÀO -->
-      <h1 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight mb-1">
-        Siêu Trạng Nhí
-      </h1>
-      <h2 class="text-xl sm:text-2xl font-black text-[#2E7D32] tracking-tight mb-2">
-        Tiếng Việt
-      </h2>
-      <p class="text-xs sm:text-sm font-bold text-slate-600 mb-6">
-        Học Vui • Nhớ Lâu • Ôn Thi Tiểu Học
-      </p>
-
-      <!-- NÚT BẮT ĐẦU VÀO APP -->
-      <button onclick="dismissSplashScreen()" class="btn-3d px-8 py-3 rounded-2xl bg-[#FFA000] hover:bg-[#FF8F00] text-white font-black text-sm sm:text-base shadow-lg flex items-center gap-2 transform active:scale-95 transition-all">
-        <span>Bắt Đầu Khám Phá 🚀</span>
-      </button>
-
-      <span class="text-[11px] text-slate-500 font-medium mt-3">Chạm vào màn hình để bắt đầu ngay</span>
-    </div>
-  </div>
-
-  <!-- ======================================================== -->
   <!-- HEADER & THANH TRẠNG THÁI TRẠNG NGUYÊN NHÍ -->
   <!-- ======================================================== -->
   <header id="main-app-header" class="sticky top-0 z-40 bg-gradient-to-r from-[#81C784] via-[#4CAF50] to-[#388E3C] text-white shadow-md border-b-4 border-[#2E7D32] px-3 py-2.5">
