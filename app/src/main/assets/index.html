@@ -4,10 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Siêu Trạng Nhí Tiếng Việt</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind CSS & Lucide Icons (CDN + Local Fallback) -->
+  <script src="https://cdn.tailwindcss.com" onerror="this.onerror=null; this.src='tailwindcss.js';"></script>
+  <script src="https://unpkg.com/lucide@latest" onerror="this.onerror=null; this.src='lucide.min.js';"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -231,7 +230,7 @@
   <!-- HEADER & THANH TRẠNG THÁI TRẠNG NGUYÊN NHÍ -->
   <!-- ======================================================== -->
   <header id="main-app-header" class="sticky top-0 z-40 bg-gradient-to-r from-[#81C784] via-[#4CAF50] to-[#388E3C] text-white shadow-md border-b-4 border-[#2E7D32] px-3 py-2.5">
-    <div class="max-w-5xl mx-auto flex items-center justify-between gap-2">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
       <!-- Học sinh & Chibi Avatar -->
       <div class="flex items-center gap-2 cursor-pointer" onclick="openAvatarModal()" title="Bấm để vào Tủ Đồ Chibi & Đổi quà bằng Sao">
         <div id="header-avatar-container" class="relative w-10 h-10 bg-gradient-to-br from-amber-200 to-amber-400 rounded-full border-2 border-yellow-300 flex items-center justify-center shadow-inner overflow-hidden transform hover:scale-110 active:scale-95 transition-transform">
@@ -250,8 +249,11 @@
         </div>
       </div>
 
-      <!-- Nâng Cấp VIP, Xu/Sao & Nút Âm Thanh -->
+      <!-- Đăng Nhập, Nâng Cấp VIP, Xu/Sao & Nút Âm Thanh -->
       <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Nút Đăng Nhập / Đăng Xuất Web -->
+        <div id="btn-header-auth"></div>
+
         <!-- Nút Nâng Cấp VIP ở gần số sao -->
         <button onclick="openVipModal()" id="btn-header-vip-upgrade" class="btn-3d flex items-center gap-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 px-2.5 sm:px-3 py-1 rounded-full border border-yellow-100 shadow font-black text-xs hover:scale-105 active:scale-95 transition-all" title="Nâng Cấp Tài Khoản VIP">
           <span class="text-sm">👑</span>
@@ -272,7 +274,7 @@
   </header>
 
   <!-- CONTAINER CHÍNH -->
-  <main id="app-root" class="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-4 pb-20"></main>
+  <main id="app-root" class="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 pb-20"></main>
 
   <!-- CÁC MODAL HỆ THỐNG -->
   <div id="modal-container"></div>
@@ -1202,10 +1204,21 @@
     { card: "border-red-500 bg-red-100 text-red-950 ring-2 ring-red-300", badge: "bg-red-600 text-white" }
   ];
 
+  function formatDateVN(timestamp) {
+    if (!timestamp) return '';
+    const d = new Date(timestamp);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
   const AppState = {
-    selectedGrade: 4,      // Lớp 1 - 5
+    selectedGrade: 1,      // Lớp 1 - 5 (mặc định Lớp 1)
     studentName: 'Siêu Trạng Nhí', // Tên học sinh mặc định
     customAccountId: '',   // ID tài khoản do người dùng input (nếu có)
+    loggedInAccount: null, // Tài khoản Web ID (l1_001...), grade, firstLoginTimestamp, expiryTimestamp
+    lockedToGrade: null,   // Khóa cứng khối lớp đã kích hoạt (1 - 5)
     useCustomAvatar: false, // Bật khi thay đổi phụ kiện / tóc / áo tùy biến
     avatarId: 'chibi_cong_chua_toc_may',
     selectedChibiId: 'chibi_cong_chua_toc_may',
@@ -1219,16 +1232,16 @@
       accessory: 'acc_no_cai_toc',
       glasses: 'glasses_none'
     },
-    isAdmin: false,         // Quyền Admin: Chỉ kích hoạt khi nhập đúng ID uyenlp1310 và mật khẩu Vudung177.
+    isAdmin: false,         // Quyền Admin
     stars: 180,
-    isVip1: false,          // Mở 18 vòng + lời giải (còn ads)
+    isVip1: false,          // Mở 18 vòng + lời giải
     isVip2: false,          // Mở 18 vòng + lời giải + TẮT ADS
     soundEnabled: true,
     unlockedRounds: [1, 2, 3],
-    singlePlayTickets: {},  // Vé 1 lần chơi cho Vòng 4-18 (xem video nhận 1 lượt, chơi xong lại xem tiếp)
+    singlePlayTickets: {},  // Vé 1 lần chơi cho Vòng 4-18
     currentSeed: 1,         // Đề số 1 đến 1000
-    roundAdShown: false,    // Kiểm soát chỉ hiện 1 lần quảng cáo khi chơi xong cả chặng 1-6
-    completedFreeRoundsCount: 0, // Bộ đếm số chặng/vòng miễn phí đã nộp bài hoàn thành (Frequency capping: 2 chặng = 1 Interstitial Ad)
+    roundAdShown: false,
+    completedFreeRoundsCount: 0,
 
     // Trạng thái bài thi hiện tại
     examMode: 1,            // 1: Vòng Tự Luyện (3 game), 2: Vòng Thi Các Cấp (Đề Tổng Hợp 30 câu)
@@ -1333,8 +1346,27 @@
         AppState.isVip2 = !!d.isVip2;
         AppState.vip1ExpiryTimestamp = d.vip1ExpiryTimestamp || 0;
 
+        // Khôi phục tài khoản đã đăng nhập
+        if (d.loggedInAccount) {
+          AppState.loggedInAccount = d.loggedInAccount;
+          if (AppState.loggedInAccount.expiryTimestamp && Date.now() > AppState.loggedInAccount.expiryTimestamp) {
+            console.warn('Tài khoản Web ID đã hết hạn 1 năm sử dụng!');
+            AppState.loggedInAccount = null;
+            AppState.lockedToGrade = null;
+          } else {
+            AppState.lockedToGrade = d.lockedToGrade || AppState.loggedInAccount.grade;
+            AppState.selectedGrade = AppState.lockedToGrade;
+            AppState.customAccountId = AppState.loggedInAccount.id ? AppState.loggedInAccount.id.toUpperCase() : '';
+            AppState.studentName = AppState.customAccountId;
+            AppState.isVip1 = true;
+            AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
+          }
+        } else {
+          AppState.selectedGrade = d.selectedGrade || 1;
+        }
+
         // Kiểm tra thời hạn 1 năm (365 ngày) từ thời điểm bắt đầu đăng ký VIP 1
-        if (AppState.isVip1 && !AppState.isVip2) {
+        if (AppState.isVip1 && !AppState.isVip2 && !AppState.loggedInAccount) {
           if (!AppState.vip1ExpiryTimestamp) {
             AppState.vip1ExpiryTimestamp = Date.now() + (365 * 24 * 60 * 60 * 1000);
           } else if (Date.now() > AppState.vip1ExpiryTimestamp) {
@@ -1344,7 +1376,6 @@
         AppState.unlockedRounds = d.unlockedRounds || [1, 2, 3];
         AppState.singlePlayTickets = d.singlePlayTickets || {};
         AppState.completedFreeRoundsCount = d.completedFreeRoundsCount || 0;
-        AppState.selectedGrade = d.selectedGrade || 4;
         if (d.soundEnabled !== undefined) AppState.soundEnabled = d.soundEnabled;
         if (isAdminAccount()) {
           AppState.ownedChibis = AVATAR_LOOKBOOKS.map(x => x.id);
@@ -1381,6 +1412,8 @@
       localStorage.setItem('TRANG_NHI_STATE_V3', JSON.stringify({
         studentName: AppState.studentName,
         customAccountId: AppState.customAccountId || '',
+        loggedInAccount: AppState.loggedInAccount || null,
+        lockedToGrade: AppState.lockedToGrade || null,
         useCustomAvatar: !!AppState.useCustomAvatar,
         avatarId: AppState.avatarId,
         selectedChibiId: AppState.selectedChibiId,
@@ -4305,13 +4338,10 @@
   }
 
   function isRoundUnlocked(roundNum) {
-    // Tài khoản Admin uyenlp1310 (đã xác thực pass Vudung177.) mở khóa TẤT CẢ các vòng để test bộ câu hỏi
     if (isAdminAccount()) return true;
-    // Vòng 1 đến 3 hoàn toàn miễn phí cho mọi tài khoản học sinh & giáo viên
+    if (AppState.loggedInAccount && AppState.loggedInAccount.grade === AppState.selectedGrade) return true;
     if (roundNum <= 3) return true;
-    // Gói VIP mở khóa toàn bộ vòng vĩnh viễn
     if (AppState.isVip1 || AppState.isVip2) return true;
-    // Vòng 4 trở đi: Xem video quảng cáo mở khóa 1 lần chơi, sau khi chơi lại yêu cầu xem quảng cáo tiếp
     return !!(AppState.singlePlayTickets && AppState.singlePlayTickets[roundNum]);
   }
 
@@ -4323,15 +4353,13 @@
     const soundIcon = document.getElementById('icon-sound');
     const avatarEl = document.getElementById('header-avatar-display');
     const headerVipBtn = document.getElementById('btn-header-vip-upgrade');
+    const headerAuthBtn = document.getElementById('btn-header-auth');
 
     const accId = (AppState.customAccountId || '').trim();
     const studentName = (AppState.studentName || '').trim();
     const chibiName = AppState.avatarName || 'Siêu Trạng Nhí';
 
     let displayName = accId ? accId : (studentName && studentName !== 'Siêu Trạng Nhí' && studentName !== 'Công chúa tóc mây' ? studentName : chibiName);
-    if ((AppState.isVip1 || AppState.isVip2) && (!displayName || displayName === 'Siêu Trạng Nhí' || displayName === 'Công chúa tóc mây')) {
-      displayName = 'Tài khoản VIP';
-    }
 
     if (nameEl) nameEl.textContent = displayName;
     if (gradeEl) gradeEl.textContent = `Lớp ${AppState.selectedGrade}`;
@@ -4339,6 +4367,22 @@
 
     if (avatarEl) {
       avatarEl.innerHTML = getCurrentAvatarHtml(40);
+    }
+
+    if (headerAuthBtn) {
+      if (AppState.loggedInAccount) {
+        headerAuthBtn.innerHTML = `
+          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
+            <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
+          </button>
+        `;
+      } else {
+        headerAuthBtn.innerHTML = `
+          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-2.5 py-1 rounded-full border border-yellow-200 shadow font-black text-xs transition-all" title="Đăng nhập tài khoản ID học sinh (l1_001...)">
+            <span>🔑 Đăng nhập</span>
+          </button>
+        `;
+      }
     }
 
     if (headerVipBtn) {
@@ -4355,6 +4399,10 @@
       if (isAdminAccount()) {
         vipEl.className = 'bg-red-600 text-yellow-200 text-[11px] px-2.5 py-0.5 rounded-full font-black border border-yellow-300 shadow';
         vipEl.textContent = 'Admin';
+      } else if (AppState.loggedInAccount) {
+        const daysLeft = Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)));
+        vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
+        vipEl.textContent = `Mở 1 Năm (${daysLeft}d)`;
       } else if (AppState.isVip2) {
         vipEl.className = 'bg-amber-500 text-amber-950 text-[11px] px-2 py-0.5 rounded-full font-black border border-yellow-200';
         vipEl.textContent = 'VIP 2';
@@ -4363,7 +4411,7 @@
         vipEl.textContent = 'VIP 1';
       } else {
         vipEl.className = 'bg-emerald-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold';
-        vipEl.textContent = 'Thường';
+        vipEl.textContent = 'Chưa Đăng Nhập';
       }
     }
 
@@ -4765,62 +4813,300 @@
     }
   }
 
-  function openAccountModal() {
+  function openLoginModal() {
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
       SoundEngine.playClick();
     }
     const modalContainer = document.getElementById('modal-container');
 
     modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="scroll-card max-w-sm w-full p-5 bg-white border-2 border-amber-400 relative shadow-xl">
-          <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1">
+      <div class="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-gradient-to-b from-amber-50 via-white to-orange-50/70 rounded-3xl border-4 border-amber-400 relative shadow-2xl overflow-hidden">
+          <button onclick="closeModal()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
-          <div class="text-center mb-3">
-            <div class="relative inline-block">
-              <div class="w-14 h-14 bg-gradient-to-br from-amber-200 to-amber-400 rounded-full flex items-center justify-center mx-auto mb-1 border-2 border-amber-300 shadow-inner overflow-hidden p-0.5 bg-white">
-                <div class="w-full h-full flex items-center justify-center">${getCurrentAvatarHtml(52)}</div>
+          <div class="text-center mb-4">
+            <div class="relative inline-block mb-2">
+              <div class="w-20 h-20 bg-gradient-to-br from-amber-100 via-white to-amber-200 rounded-full border-4 border-amber-400 flex items-center justify-center mx-auto shadow-md p-1 overflow-hidden bg-white">
+                <img src="app_logo.png" alt="Siêu Trạng Nhí" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
               </div>
-              <button onclick="openAvatarModal()" class="absolute -bottom-1 -right-1 bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full font-bold shadow" title="Vào Cửa hàng Hình mẫu">
-                Hình mẫu
-              </button>
+              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-7 h-7 flex items-center justify-center text-xs shadow font-bold">🔑</span>
             </div>
-            <h3 class="text-base font-black text-slate-800">Thông Tin Tài Khoản</h3>
-            <p class="text-xs text-amber-800 font-bold mt-0.5">${AppState.avatarName || 'Nhân vật Chibi'} • ⭐ ${AppState.stars || 0} Sao</p>
+            <h3 class="text-lg sm:text-xl font-black text-red-900 uppercase tracking-tight">ĐĂNG NHẬP TÀI KHOẢN HỌC SINH</h3>
+            <p class="text-xs text-slate-600 font-bold mt-1">Học vui • Nhớ lâu • Mở khóa duy nhất 1 khối lớp trong 1 năm</p>
           </div>
 
-          <div class="space-y-2 mb-3 text-left">
-            <!-- Dòng 1: Tài khoản -->
-            <div class="flex items-center gap-2 bg-[#FFFBEB] p-2.5 rounded-xl border border-amber-300 shadow-sm">
-              <span class="text-xs font-black text-amber-900 whitespace-nowrap min-w-[70px]">Tài khoản :</span>
-              <input type="text" id="input-account-name" value="${AppState.customAccountId || ''}" placeholder="Nhập tên hiển thị..." class="flex-1 bg-white px-2.5 py-1.5 rounded-lg border border-amber-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500">
+          <form onsubmit="event.preventDefault(); submitLoginForm();" class="space-y-3 mb-4">
+            <div>
+              <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mã ID Học Sinh:</label>
+              <div class="relative">
+                <input type="text" id="login-id-input" placeholder="Ví dụ: l1_001, l2_005, l3_100..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">Lớp 1 - 5</span>
+              </div>
             </div>
 
-            <!-- Dòng 2: Trạng thái VIP -->
-            <div class="flex items-center gap-2 bg-[#FEF3C7] p-2.5 rounded-xl border border-amber-400 shadow-sm">
-              <span class="text-xs font-black text-amber-950 whitespace-nowrap min-w-[70px]">Trạng thái :</span>
-              <span class="flex-1 text-xs font-black text-emerald-700 truncate">
-                ${AppState.isVip2 ? 'Gói VIP 2 (Trọn Đời)' : (AppState.isVip1 ? 'Gói VIP 1 (Mùa Thi)' : 'Miễn Phí')}
-              </span>
+            <div>
+              <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mật Khẩu:</label>
+              <input type="password" id="login-pass-input" value="kdepass" placeholder="Mật khẩu (kdepass)" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
             </div>
+
+            <button type="submit" class="btn-3d btn-3d-gold w-full py-3 rounded-2xl font-black text-amber-950 text-sm sm:text-base flex items-center justify-center gap-2 shadow-md mt-2">
+              <span>🚀 Đăng Nhập Ngay</span>
+            </button>
+          </form>
+
+          <div class="p-3 bg-amber-100/70 rounded-2xl border border-amber-300 text-[11px] sm:text-xs text-amber-950 leading-relaxed font-medium">
+            <div class="font-extrabold text-red-900 mb-1 flex items-center gap-1">
+              <span>💡</span> Cấu trúc Mã ID & Mật khẩu chuẩn:
+            </div>
+            <ul class="space-y-0.5 list-disc list-inside">
+              <li><b>Mã ID:</b> <code class="bg-white px-1 rounded text-red-700 font-bold">l&lt;lớp&gt;_&lt;số&gt;</code> (l1_001 cho Lớp 1, l2_001 cho Lớp 2...)</li>
+              <li><b>Số thứ tự:</b> Đánh số từ 00001 tới 99999 cho mỗi khối lớp.</li>
+              <li><b>Mật khẩu:</b> <code class="bg-white px-1 rounded text-red-700 font-bold">kdepass</code></li>
+              <li><b>Thời hạn:</b> Mở khóa duy nhất khối lớp đó trong <b>1 năm (365 ngày)</b> từ ngày đăng nhập đầu tiên.</li>
+            </ul>
           </div>
+        </div>
+      </div>
+    `;
+    safeCreateIcons();
+  }
 
-          <!-- Nút Khôi Phục VIP -->
-          <button onclick="triggerScanAndRestoreVip()" class="w-full mb-3 py-2.5 px-3 rounded-xl btn-3d bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md">
-            <span>🔍</span> Khôi phục VIP qua Google Play
+  function submitLoginForm() {
+    const idEl = document.getElementById('login-id-input');
+    const passEl = document.getElementById('login-pass-input');
+    if (idEl && passEl) {
+      processLogin(idEl.value, passEl.value);
+    }
+  }
+
+  function processLogin(idInput, passInput) {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
+      SoundEngine.playClick();
+    }
+
+    const rawId = (idInput || '').trim();
+    const rawPass = (passInput || '').trim();
+
+    if (!rawId) {
+      showCustomAlert('Vui lòng nhập Mã ID! (Ví dụ: l1_001 cho Lớp 1, l2_001 cho Lớp 2)', 'Lỗi Đăng Nhập');
+      return false;
+    }
+
+    if (!rawPass) {
+      showCustomAlert('Vui lòng nhập Mật khẩu! (Mật khẩu mặc định: kdepass)', 'Lỗi Đăng Nhập');
+      return false;
+    }
+
+    const lowerId = rawId.toLowerCase();
+    const lowerPass = rawPass.toLowerCase();
+
+    // Kiểm tra Admin
+    if (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310') {
+      if (lowerPass === 'kdepass' || lowerPass === 'adminpass' || lowerPass === 'vudung177.' || lowerPass === 'apptest' || lowerPass === 'uyenlp1310') {
+        AppState.isAdmin = true;
+        AppState.isVip1 = true;
+        AppState.isVip2 = true;
+        AppState.studentName = rawId.toUpperCase();
+        AppState.customAccountId = rawId.toUpperCase();
+        AppState.lockedToGrade = null;
+        AppState.loggedInAccount = {
+          id: rawId.toUpperCase(),
+          grade: AppState.selectedGrade || 1,
+          isAdmin: true,
+          firstLoginTimestamp: Date.now(),
+          expiryTimestamp: Date.now() + (3650 * 24 * 60 * 60 * 1000)
+        };
+        savePersistedState();
+        if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) SoundEngine.playFanfare();
+        closeModal();
+        updateHeaderUI();
+        renderHome();
+        showCustomAlert(`🎉 Đăng nhập Admin ${rawId.toUpperCase()} thành công! Bạn có toàn quyền xem tất cả 5 khối lớp và 18 vòng thi.`);
+        return true;
+      }
+    }
+
+    // Kiểm tra định dạng ID: l1_001 tới l5_99999
+    const idRegex = /^l([1-5])_(\d{1,5})$/i;
+    const match = lowerId.match(idRegex);
+
+    if (!match) {
+      showCustomAlert(
+        `❌ Mã ID không đúng định dạng!\n\n` +
+        `📌 Quy tắc ID: l<khối_lớp>_<số_thứ_tự>\n` +
+        `Ví dụ hợp lệ:\n` +
+        `• l1_001 (Lớp 1 - Số 001)\n` +
+        `• l2_00001 (Lớp 2 - Số 00001)\n` +
+        `• l3_050 (Lớp 3 - Số 050)\n` +
+        `• l4_99999 (Lớp 4 - Số 99999)\n` +
+        `• l5_100 (Lớp 5 - Số 100)\n\n` +
+        `Mỗi lớp đánh số từ 00001 đến 99999.`,
+        'ID Không Hợp Lệ'
+      );
+      return false;
+    }
+
+    if (lowerPass !== 'kdepass') {
+      showCustomAlert(`❌ Mật khẩu không chính xác!\nMật khẩu mặc định là: kdepass`, 'Mật Khẩu Sai');
+      return false;
+    }
+
+    const assignedGrade = parseInt(match[1], 10);
+    const idNumber = parseInt(match[2], 10);
+
+    if (idNumber < 1 || idNumber > 99999) {
+      showCustomAlert(`❌ Số thứ tự ID phải nằm trong khoảng từ 00001 đến 99999!`, 'ID Không Hợp Lệ');
+      return false;
+    }
+
+    let accountsStore = {};
+    try {
+      const storedStr = localStorage.getItem('TRANG_NHI_WEB_ACCOUNTS');
+      if (storedStr) accountsStore = JSON.parse(storedStr);
+    } catch (e) {
+      accountsStore = {};
+    }
+
+    const accountKey = lowerId;
+    let acc = accountsStore[accountKey];
+
+    if (!acc) {
+      const now = Date.now();
+      acc = {
+        id: lowerId,
+        grade: assignedGrade,
+        firstLoginTimestamp: now,
+        expiryTimestamp: now + (365 * 24 * 60 * 60 * 1000)
+      };
+      accountsStore[accountKey] = acc;
+      try {
+        localStorage.setItem('TRANG_NHI_WEB_ACCOUNTS', JSON.stringify(accountsStore));
+      } catch (e) {}
+    }
+
+    if (Date.now() > acc.expiryTimestamp) {
+      const startDateStr = formatDateVN(acc.firstLoginTimestamp);
+      const endDateStr = formatDateVN(acc.expiryTimestamp);
+      showCustomAlert(
+        `⚠️ Tài khoản ${acc.id.toUpperCase()} đã HẾT HẠN 1 năm sử dụng!\n\n` +
+        `• Ngày đăng nhập đầu: ${startDateStr}\n` +
+        `• Ngày hết hạn: ${endDateStr}\n\n` +
+        `Vui lòng liên hệ quản trị viên để gia hạn sử dụng.`,
+        'Tài Khoản Hết Hạn'
+      );
+      return false;
+    }
+
+    AppState.loggedInAccount = acc;
+    AppState.lockedToGrade = assignedGrade;
+    AppState.selectedGrade = assignedGrade;
+    AppState.studentName = acc.id.toUpperCase();
+    AppState.customAccountId = acc.id.toUpperCase();
+    AppState.isVip1 = true;
+    AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
+
+    savePersistedState();
+
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) {
+      SoundEngine.playFanfare();
+    }
+
+    closeModal();
+    updateHeaderUI();
+    renderHome();
+
+    const daysLeft = Math.max(0, Math.ceil((acc.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)));
+    showCustomAlert(
+      `🎉 ĐĂNG NHẬP THÀNH CÔNG!\n\n` +
+      `👤 Mã ID: ${acc.id.toUpperCase()}\n` +
+      `📚 Mở khóa duy nhất: LỚP ${assignedGrade}\n` +
+      `⏳ Thời hạn sử dụng: 1 NĂM (${daysLeft} ngày còn lại)\n` +
+      `📅 Bắt đầu tính từ: ${formatDateVN(acc.firstLoginTimestamp)}`,
+      'Chào Mừng Trạng Nhí!'
+    );
+    return true;
+  }
+
+  function processLogout() {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
+      SoundEngine.playClick();
+    }
+    showCustomConfirm(
+      'Bạn có chắc chắn muốn đăng xuất tài khoản hiện tại?',
+      () => {
+        AppState.loggedInAccount = null;
+        AppState.lockedToGrade = null;
+        AppState.studentName = 'Siêu Trạng Nhí';
+        AppState.customAccountId = '';
+        AppState.isAdmin = false;
+        savePersistedState();
+        updateHeaderUI();
+        renderHome();
+        showCustomAlert('Đã đăng xuất tài khoản thành công!');
+      },
+      null,
+      'Đăng Xuất Tài Khoản'
+    );
+  }
+
+  function openAccountModal() {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
+      SoundEngine.playClick();
+    }
+    if (!AppState.loggedInAccount && !isAdminAccount()) {
+      openLoginModal();
+      return;
+    }
+
+    const modalContainer = document.getElementById('modal-container');
+    const acc = AppState.loggedInAccount;
+
+    const startDateStr = acc ? formatDateVN(acc.firstLoginTimestamp) : 'Chưa có';
+    const endDateStr = acc ? formatDateVN(acc.expiryTimestamp) : 'Chưa có';
+    const daysLeft = acc ? Math.max(0, Math.ceil((acc.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24))) : 365;
+
+    modalContainer.innerHTML = `
+      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+        <div class="scroll-card max-w-sm w-full p-5 bg-white border-4 border-amber-400 relative shadow-2xl rounded-3xl">
+          <button onclick="closeModal()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+            <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
-          <div class="space-y-2">
-            ${(AppState.isVip2 || isAdminAccount()) ? `
-              <button onclick="triggerSyncGithubQuestions()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 border border-sky-300 text-sky-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm">
-                <span>🔄</span> Cập nhật đề
-              </button>
-            ` : ''}
+          <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-gradient-to-br from-amber-200 to-amber-400 rounded-full flex items-center justify-center mx-auto mb-1 border-2 border-amber-300 shadow-inner overflow-hidden p-0.5 bg-white">
+              <div class="w-full h-full flex items-center justify-center">${getCurrentAvatarHtml(56)}</div>
+            </div>
+            <h3 class="text-lg font-black text-red-900">${acc ? acc.id.toUpperCase() : (AppState.customAccountId || 'Học Sinh')}</h3>
+            <p class="text-xs text-amber-800 font-bold mt-0.5">⭐ ${AppState.stars || 0} Sao Thưởng • Tủ Đồ Chibi</p>
+          </div>
 
-            <button onclick="openAvatarModal()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-50 to-red-50 hover:from-amber-100 hover:to-red-100 border border-amber-300 text-red-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm">
-              <span>🖼️</span> Cửa Hàng Chibi: Đổi Hình Mẫu bằng Sao ⭐
+          <div class="space-y-2 mb-4 text-xs">
+            <div class="flex items-center justify-between bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+              <span class="font-bold text-slate-600">Mã ID Học Sinh:</span>
+              <span class="font-black text-red-900 uppercase">${acc ? acc.id : 'Admin'}</span>
+            </div>
+
+            <div class="flex items-center justify-between bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+              <span class="font-bold text-slate-600">Khối Lớp Kích Hoạt:</span>
+              <span class="font-black text-emerald-800">LỚP ${AppState.lockedToGrade || AppState.selectedGrade} (Đã Mở 18 Vòng)</span>
+            </div>
+
+            <div class="flex items-center justify-between bg-orange-50 p-2.5 rounded-xl border border-orange-200">
+              <span class="font-bold text-slate-600">Thời Hạn Sử Dụng:</span>
+              <span class="font-black text-amber-900">${daysLeft} ngày (Đến ${endDateStr})</span>
+            </div>
+
+            <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px]">
+              <span class="font-semibold text-slate-500">Đăng nhập đầu tiên:</span>
+              <span class="font-bold text-slate-700">${startDateStr}</span>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <button onclick="openAvatarModal()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-100 to-amber-200 border border-amber-400 text-amber-950 font-black text-xs flex items-center justify-center gap-2 shadow-xs">
+              <span>🎭</span> Cửa Hàng Chibi: Đổi Quà bằng Sao ⭐
             </button>
 
             <button onclick="openDisclaimerModal()" class="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold text-xs flex items-center justify-center gap-1.5">
@@ -4828,9 +5114,9 @@
             </button>
           </div>
 
-          <div class="flex gap-2 mt-4">
-            <button onclick="saveCustomAccount()" class="btn-3d btn-3d-green flex-1 py-2 rounded-xl text-white font-black text-xs sm:text-sm shadow">
-              Lưu Thay Đổi
+          <div class="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+            <button onclick="processLogout()" class="btn-3d btn-3d-red flex-1 py-2 rounded-xl text-white font-black text-xs shadow">
+              Đăng Xuất
             </button>
             <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs">
               Đóng
@@ -5604,9 +5890,101 @@
   }
 
   // ==========================================
+  // [MÀN HÌNH ĐĂNG NHẬP BẮT BUỘC TRƯỚC KHI VÀO TRANG CHỦ]
+  // ==========================================
+  function renderLoginGate() {
+    clearExamSessionData();
+    const root = document.getElementById('app-root');
+    if (!root) return;
+
+    // Ẩn Header khi ở màn hình Cổng đăng nhập
+    const appHeader = document.getElementById('main-app-header');
+    if (appHeader) appHeader.style.display = 'none';
+
+    root.innerHTML = `
+      <div class="min-h-[85vh] flex items-center justify-center p-3 sm:p-6 select-none">
+        <div class="scroll-card max-w-lg w-full p-6 sm:p-8 bg-gradient-to-b from-amber-50 via-white to-orange-50 rounded-3xl border-4 border-amber-400 relative shadow-2xl text-center overflow-hidden">
+
+          <!-- Họa tiết trang trí vân mây trống đồng -->
+          <div class="dong-son-pattern absolute inset-0 pointer-events-none opacity-20"></div>
+
+          <div class="relative z-10">
+            <!-- Logo & Chibi nổi bật -->
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-4">
+              <div class="w-full h-full rounded-full border-4 border-amber-400 bg-gradient-to-br from-amber-100 via-white to-amber-200 p-1 shadow-lg overflow-hidden flex items-center justify-center bg-white transform hover:scale-105 transition-transform">
+                <img src="app_logo.png" alt="Siêu Trạng Nhí" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
+              </div>
+              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-8 h-8 flex items-center justify-center text-sm shadow animate-bounce font-bold">🔑</span>
+            </div>
+
+            <!-- Tiêu đề ứng dụng -->
+            <h1 class="text-2xl sm:text-3xl font-black text-red-900 tracking-tight leading-tight uppercase mb-1">
+              Siêu Trạng Nhí Tiếng Việt
+            </h1>
+            <p class="text-xs sm:text-sm font-extrabold text-emerald-800 mb-6">
+              Nền Tảng Ôn Thi Tiếng Việt Tiểu Học (Lớp 1 - Lớp 5)
+            </p>
+
+            <!-- Form đăng nhập bắt buộc -->
+            <form onsubmit="event.preventDefault(); submitLoginGateForm();" class="space-y-3.5 mb-5 text-left">
+              <div>
+                <label class="block text-xs sm:text-sm font-black text-slate-800 uppercase mb-1">
+                  Mã ID Học Sinh:
+                </label>
+                <div class="relative">
+                  <input type="text" id="gate-id-input" placeholder="Ví dụ: l1_001, l2_005, l3_100..." class="w-full px-4 py-3 rounded-2xl border-2 border-amber-300 font-black text-slate-900 text-sm sm:text-base focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">Lớp 1 - 5</span>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-black text-slate-800 uppercase mb-1">
+                  Mật Khẩu:
+                </label>
+                <input type="password" id="gate-pass-input" value="kdepass" placeholder="Mật khẩu (kdepass)" class="w-full px-4 py-3 rounded-2xl border-2 border-amber-300 font-bold text-slate-900 text-sm sm:text-base focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <button type="submit" class="btn-3d btn-3d-gold w-full py-3.5 rounded-2xl font-black text-amber-950 text-base sm:text-lg flex items-center justify-center gap-2 shadow-lg mt-3 transition-transform active:scale-95">
+                <span>🚀 ĐĂNG NHẬP VÀO HỌC</span>
+              </button>
+            </form>
+
+            <!-- Khối hướng dẫn định dạng Mã ID -->
+            <div class="p-3.5 bg-amber-100/80 rounded-2xl border border-amber-300 text-xs text-amber-950 text-left leading-relaxed font-medium shadow-xs">
+              <div class="font-extrabold text-red-900 mb-1 flex items-center gap-1">
+                <span>💡</span> Cấu trúc Mã ID & Mật khẩu học sinh:
+              </div>
+              <ul class="space-y-1 list-disc list-inside">
+                <li><b>Mã ID:</b> <code class="bg-white px-1.5 py-0.5 rounded text-red-700 font-bold border border-amber-300">l&lt;lớp&gt;_&lt;số&gt;</code> (l1_001 cho Lớp 1, l2_001 cho Lớp 2...)</li>
+                <li><b>Số thứ tự ID:</b> Đánh số từ 00001 tới 99999 cho mỗi khối lớp.</li>
+                <li><b>Mật khẩu mặc định:</b> <code class="bg-white px-1.5 py-0.5 rounded text-red-700 font-bold border border-amber-300">kdepass</code></li>
+                <li><b>Thời hạn:</b> Mở khóa duy nhất khối lớp đó trong <b>1 năm (365 ngày)</b> từ lần đầu đăng nhập.</li>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+    safeCreateIcons();
+  }
+
+  function submitLoginGateForm() {
+    const idEl = document.getElementById('gate-id-input');
+    const passEl = document.getElementById('gate-pass-input');
+    if (idEl && passEl) {
+      processLogin(idEl.value, passEl.value);
+    }
+  }
+
+  // ==========================================
   // [MÀN HÌNH CHÍNH & CHỌN VÒNG THI]
   // ==========================================
   function renderHome() {
+    if (!AppState.loggedInAccount && !isAdminAccount()) {
+      renderLoginGate();
+      return;
+    }
     clearExamSessionData();
     if (typeof currentFireworks300Cleanup === 'function') {
       currentFireworks300Cleanup();
@@ -5738,15 +6116,47 @@
 
           <!-- Thanh 2 Nút Action: Bố trí hàng ngang gọn gàng bên dưới trên mobile, bên phải trên desktop -->
           <div class="flex flex-row items-center justify-end gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-dashed border-amber-200 sm:border-none">
-            <button onclick="openAccountModal()" class="btn-3d flex-1 sm:flex-initial bg-white hover:bg-amber-50 border-2 border-amber-300 text-slate-800 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Quản lý tài khoản">
-              <span>👤 Tài Khoản</span>
-            </button>
+            ${AppState.loggedInAccount ? `
+              <button onclick="openAccountModal()" class="btn-3d flex-1 sm:flex-initial bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Quản lý tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
+                <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
+              </button>
+            ` : `
+              <button onclick="openLoginModal()" class="btn-3d flex-1 sm:flex-initial bg-amber-400 hover:bg-amber-500 border-2 border-yellow-200 text-amber-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Đăng nhập tài khoản ID học sinh">
+                <span>🔑 Đăng Nhập</span>
+              </button>
+            `}
             <button onclick="openAvatarModal()" class="btn-3d flex-1 sm:flex-initial bg-amber-100 hover:bg-amber-200 border-2 border-amber-400 text-amber-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Tủ đồ Chibi (Đổi quà bằng Sao)">
               <span>🎭 Tủ Đồ</span>
             </button>
           </div>
 
         </div>
+
+        <!-- Banner nhắc đăng nhập nếu chưa đăng nhập -->
+        ${!AppState.loggedInAccount ? `
+          <div class="mt-3.5 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
+              <div>
+                <h4 class="font-black text-xs sm:text-sm text-yellow-100">Đăng Nhập Mã ID Học Sinh (Ví dụ: l1_001, l2_001...)</h4>
+                <p class="text-[11px] text-white/90">Mở khóa trọn bộ 18 vòng thi của khối lớp đó trong <b>1 năm (365 ngày)</b> từ ngày đầu tiên đăng nhập. Mật khẩu: <b>kdepass</b></p>
+              </div>
+            </div>
+            <button onclick="openLoginModal()" class="btn-3d btn-3d-gold px-4 py-2 rounded-xl text-amber-950 font-black text-xs whitespace-nowrap shadow shrink-0">
+              Đăng Nhập Ngay 🚀
+            </button>
+          </div>
+        ` : `
+          <div class="mt-3.5 p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">
+            <div class="flex items-center gap-2">
+              <span class="text-base">✅</span>
+              <span>Tài khoản <b>${AppState.loggedInAccount.id.toUpperCase()}</b> đã kích hoạt mở khóa <b>LỚP ${AppState.lockedToGrade}</b> trong vòng 1 năm (Còn <b>${Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)))} ngày</b>)</span>
+            </div>
+            <button onclick="openAccountModal()" class="text-emerald-800 font-extrabold underline hover:text-emerald-900 shrink-0">
+              Chi tiết tài khoản ➔
+            </button>
+          </div>
+        `}
 
         <!-- Thanh chọn Khối lớp (Lớp 1 - 5) -->
         <div class="mt-3.5 pt-3 border-t border-amber-200/80">
@@ -5757,11 +6167,27 @@
             <span class="text-[11px] font-bold text-slate-500">Đang chọn: <b class="text-red-700">Lớp ${grade}</b></span>
           </div>
           <div class="grid grid-cols-5 gap-1.5 sm:gap-2.5">
-            ${[1, 2, 3, 4, 5].map(g => `
-              <button onclick="changeGrade(${g})" class="py-2.5 px-1 text-center rounded-xl font-black text-xs sm:text-base transition-all ${g === grade ? 'btn-3d btn-3d-red text-white scale-105 ring-2 ring-amber-400 shadow-md' : 'bg-amber-100/70 text-slate-700 hover:bg-amber-200 border border-amber-300'}">
-                Lớp ${g}
-              </button>
-            `).join('')}
+            ${[1, 2, 3, 4, 5].map(g => {
+              const isLockedOther = AppState.loggedInAccount && AppState.lockedToGrade && !AppState.isAdmin && g !== AppState.lockedToGrade;
+              const isUnlockedCurrent = AppState.loggedInAccount && AppState.lockedToGrade === g;
+              let btnClass = 'bg-amber-100/70 text-slate-700 hover:bg-amber-200 border border-amber-300';
+              let badgeText = '';
+              if (g === grade) {
+                btnClass = 'btn-3d btn-3d-red text-white scale-105 ring-2 ring-amber-400 shadow-md';
+              } else if (isLockedOther) {
+                btnClass = 'bg-slate-100 text-slate-400 border border-slate-200 opacity-75';
+                badgeText = '<span class="text-[9px] block font-semibold text-slate-500">🔒 Khóa</span>';
+              } else if (isUnlockedCurrent) {
+                btnClass = 'bg-emerald-100 text-emerald-900 border-2 border-emerald-400 font-extrabold';
+                badgeText = '<span class="text-[9px] block font-bold text-emerald-700">⭐ Đã Mở 1 Năm</span>';
+              }
+              return `
+                <button onclick="changeGrade(${g})" class="py-2.5 px-1 text-center rounded-xl font-black text-xs sm:text-base transition-all ${btnClass}">
+                  <div>Lớp ${g}</div>
+                  ${badgeText}
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>
       </div>
@@ -5788,6 +6214,7 @@
 
     safeCreateIcons();
     updateHeaderUI();
+  }
   }
 
   function openDisclaimerModal() {
@@ -5979,9 +6406,21 @@
   }
 
   function changeGrade(grade) {
+    if (AppState.loggedInAccount && AppState.lockedToGrade && !AppState.isAdmin) {
+      if (grade !== AppState.lockedToGrade) {
+        if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
+        const startDateStr = formatDateVN(AppState.loggedInAccount.firstLoginTimestamp);
+        showCustomAlert(
+          `🔒 Tài khoản ${AppState.loggedInAccount.id.toUpperCase()} được kích hoạt **chỉ duy nhất khối LỚP ${AppState.lockedToGrade}** trong vòng 1 năm (Từ ${startDateStr}).\n\n` +
+          `Để học Lớp ${grade}, vui lòng đăng nhập Mã ID tương ứng với Lớp ${grade} (Ví dụ: l${grade}_001 với mật khẩu kdepass).`,
+          'Khối Lớp Đã Khóa'
+        );
+        return;
+      }
+    }
     AppState.selectedGrade = grade;
     savePersistedState();
-    SoundEngine.playClick();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
     renderHome();
   }
 
@@ -6004,17 +6443,26 @@
   }
 
   function selectRound(roundNum) {
-    SoundEngine.playClick();
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
     if (isRoundUnlocked(roundNum)) {
       if (roundNum <= 3) {
-        // Vòng 1, 2, 3: Không cần chọn đề, mỗi lần vào tự động quay vòng ngẫu nhiên 1 trong 5 bộ đề khác nhau
+        // Vòng 1, 2, 3: Tự động quay vòng ngẫu nhiên
         const seed = Math.floor(Math.random() * 5) + 1;
         startRoundExam(roundNum, seed);
       } else {
         showRoundExamPickerModal(roundNum);
       }
     } else {
-      openUnlockRoundModal(roundNum);
+      if (!AppState.loggedInAccount) {
+        showCustomConfirm(
+          `Vòng thi này yêu cầu Đăng Nhập Mã ID Học Sinh (Ví dụ: l1_001 tới l5_99999, mật khẩu: kdepass) để mở khóa toàn bộ 18 vòng thi trong 1 năm!\n\nBạn có muốn đăng nhập ngay?`,
+          () => openLoginModal(),
+          null,
+          'Yêu Cầu Đăng Nhập'
+        );
+      } else {
+        openUnlockRoundModal(roundNum);
+      }
     }
   }
 
@@ -9951,8 +10399,12 @@
   // Khởi động
   window.addEventListener('DOMContentLoaded', () => {
     loadPersistedState();
-    renderHome();
-    // Tự động chuyển vào màn hình chính sau 2.2 giây nếu học sinh không chạm vào màn hình
+    if (AppState.loggedInAccount || isAdminAccount()) {
+      renderHome();
+    } else {
+      renderLoginGate();
+    }
+    // Tự động chuyển vào màn hình chính/đăng nhập sau 2.2 giây nếu học sinh không chạm vào màn hình
     setTimeout(() => {
       dismissSplashScreen();
     }, 2200);
