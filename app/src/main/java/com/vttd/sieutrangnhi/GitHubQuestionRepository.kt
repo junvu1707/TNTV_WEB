@@ -327,14 +327,14 @@ class GitHubQuestionRepository(private val context: Context) {
 
         if (updatedCount > 0) {
           Log.d(TAG, "Đã cập nhật thành công $updatedCount tệp đề thi mới nhất từ CDN!")
-          Pair(true, "Đã tự động cập nhật $updatedCount bộ đề mới nhất từ GitHub!")
+          Pair(true, "Đã tự động cập nhật $updatedCount bộ đề mới nhất!")
         } else {
           Log.d(TAG, "Tất cả đề thi trên máy đã ở phiên bản mới nhất!")
-          Pair(true, "Ngân hàng đề thi trên GitHub đã ở phiên bản mới nhất!")
+          Pair(true, "Ngân hàng đề thi đã ở phiên bản mới nhất!")
         }
       } catch (e: Exception) {
-        Log.e(TAG, "Lỗi đồng bộ câu hỏi GitHub CDN: ${e.message}")
-        Pair(false, "Không thể kết nối tới GitHub repo: ${e.message}")
+        Log.e(TAG, "Lỗi đồng bộ câu hỏi: ${e.message}")
+        Pair(false, "Không thể kết nối máy chủ: ${e.message}")
       }
     }
   }

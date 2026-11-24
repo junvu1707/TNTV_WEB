@@ -24,6 +24,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.ViewModelProvider
 import java.io.File
 
 class MainActivity : ComponentActivity() {
@@ -34,6 +35,9 @@ class MainActivity : ComponentActivity() {
 
   var webView: WebView? = null
   private var bannerContainer: FrameLayout? = null
+
+  lateinit var appContainer: AppContainer
+  lateinit var viewModel: MainViewModel
 
   lateinit var vipPrefs: VipPreferenceManager
   lateinit var billingManager: BillingManager
@@ -57,21 +61,22 @@ class MainActivity : ComponentActivity() {
       if (seedNewFile.exists()) seedNewFile.delete()
     } catch (_: Exception) {}
 
-    // 1. Khởi tạo Manager, GitHub Repo, Exam Generator, AdManager & Billing
-    chibiManager = ChibiManager(this)
-    chibiManager.fetchAndCacheChibis()
-    githubRepo = GitHubQuestionRepository(this)
-    githubRepo.syncAllGradesInBackground()
-    examGenerator = DynamicExamGenerator(githubRepo)
+    // 1. Tiêm phụ thuộc từ AppContainer (Service Locator / DI) & ViewModel
+    appContainer = (application as TNTVApplication).appContainer
+    viewModel = ViewModelProvider(this, MainViewModel.Factory(appContainer))[MainViewModel::class.java]
 
-    vipPrefs = VipPreferenceManager(this)
+    chibiManager = appContainer.chibiManager
+    githubRepo = appContainer.githubRepo
+    examGenerator = appContainer.examGenerator
+    vipPrefs = appContainer.vipPrefs
+    adManager = appContainer.adManager
 
-    adManager = AdManager(this, vipPrefs)
-    vipDialogManager = VipDialogManager(this)
+    vipDialogManager = appContainer.createVipDialogManager(this)
+    billingManager = appContainer.createBillingManager(this)
 
-    billingManager = BillingManager(this, vipPrefs)
     billingManager.onPurchaseSuccessCallback = { productId, level ->
       runOnUiThread {
+        viewModel.onPurchaseSuccess(level)
         updateAdMobForVipStatus()
         webView?.evaluateJavascript(
           "if (window.onVipStatusChanged) { window.onVipStatusChanged($level, ''); }",
@@ -300,6 +305,7 @@ class MainActivity : ComponentActivity() {
     } catch (_: Exception) {}
 
     // Đồng bộ trạng thái khi mở lại ứng dụng
+    viewModel.refreshVipStatus()
     updateAdMobForVipStatus()
   }
 

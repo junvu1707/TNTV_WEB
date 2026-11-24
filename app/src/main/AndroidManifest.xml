@@ -22,6 +22,7 @@
         android:required="false" />
 
     <application
+        android:name=".TNTVApplication"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="false"
