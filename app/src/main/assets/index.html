@@ -40,7 +40,7 @@
     }
     body {
       background-color: #F8FCF5;
-      background-image: 
+      background-image:
         radial-gradient(circle at 50% 0%, rgba(46, 125, 50, 0.09) 0%, transparent 75%),
         radial-gradient(circle at 100% 100%, rgba(76, 175, 80, 0.07) 0%, transparent 50%),
         radial-gradient(circle at 0% 100%, rgba(255, 160, 0, 0.05) 0%, transparent 50%);
@@ -1140,7 +1140,7 @@
         <!-- Cổ & Khuôn mặt anime phúng phính -->
         <rect x="54" y="66" width="12" height="10" rx="3" fill="#FED7AA"/>
         <ellipse cx="60" cy="52" rx="28" ry="24" fill="#FFF1EE"/>
-        
+
         <!-- Má hồng đào dễ thương -->
         <circle cx="40" cy="58" r="6.5" fill="url(#cb_blush_${size})"/>
         <circle cx="80" cy="58" r="6.5" fill="url(#cb_blush_${size})"/>
@@ -1302,8 +1302,8 @@
         }
         // Tự động dọn dẹp các phụ kiện đã xóa
         const removedItemsList = [
-          'hair_trang_thong_thai', 'hair_trang_nguyen', 'outfit_doi_vien', 'acc_but_long', 
-          'acc_sach_tre', 'acc_quat_giay', 'hair_dai_bong', 'hair_suon_hoa', 'hair_bui_natra', 
+          'hair_trang_thong_thai', 'hair_trang_nguyen', 'outfit_doi_vien', 'acc_but_long',
+          'acc_sach_tre', 'acc_quat_giay', 'hair_dai_bong', 'hair_suon_hoa', 'hair_bui_natra',
           'outfit_dam_cong_chua', 'outfit_ba_ba', 'acc_vuong_mien', 'acc_canh_dieu'
         ];
         if (AppState.avatarConfig) {
@@ -1583,69 +1583,19 @@
     return 'Nối các cặp từ tương ứng ở hai cột';
   }
 
-  // Tối ưu hóa định dạng nội dung câu hỏi: tách phần hướng dẫn ngắn gọn và phần câu văn/nội dung xuống dòng
+  // Tối ưu hóa định dạng nội dung câu hỏi: Giữ trọn vẹn toàn bộ câu văn, không cắt bỏ phần trước dấu hai chấm
   function parseAndFormatQuestionText(qText, type) {
     if (!qText) return { header: '', body: '' };
 
     let text = String(qText).trim();
 
-    // 1. Đối với dạng Điền từ (FILL / DT), luôn giữ và hiển thị trọn vẹn toàn bộ câu hỏi
-    if (type === 'FILL' || type === 'DT') {
-      const formatted = text
-        .replace(/_{2,}/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">( ... )</span>')
-        .replace(/\([\.\s]*\)/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">( ... )</span>')
-        .replace(/\[\.\.\.\]/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">[ ... ]</span>');
-
-      return { header: 'Điền từ thích hợp vào chỗ trống:', body: formatted };
-    }
-
-    // 2. Đối với trắc nghiệm và các dạng khác
-    let header = '';
-    let body = text;
-
-    const colonIdx = text.indexOf(':');
-    if (colonIdx !== -1 && colonIdx < text.length - 1) {
-      const rawInst = text.substring(0, colonIdx).trim();
-      const rawBody = text.substring(colonIdx + 1).trim();
-
-      const cleanRawBody = rawBody.replace(/[_"“'\s]+/g, '').trim();
-      if (cleanRawBody.length > 2) {
-        if (rawInst.includes('Điền quan hệ từ')) {
-          header = 'Điền quan hệ từ thích hợp:';
-        } else if (rawInst.includes('Điền từ')) {
-          header = 'Điền từ thích hợp vào chỗ trống:';
-        } else if (rawInst.includes('Sắp xếp')) {
-          header = 'Sắp xếp thành câu:';
-        } else if (rawInst.includes('Xếp') || rawInst.includes('Phân loại')) {
-          header = 'Xếp các từ vào nhóm tương ứng:';
-        } else if (rawInst.length <= 65) {
-          header = rawInst.endsWith(':') ? rawInst : (rawInst + ':');
-        } else {
-          header = 'Câu hỏi:';
-        }
-
-        body = rawBody.replace(/^["“'\s]+|["”'\s]+$/g, '').trim();
-        if (body && !body.startsWith('“') && !body.startsWith('"')) {
-          body = `“${body}”`;
-        }
-      } else {
-        body = text;
-      }
-    } else {
-      if (type === 'ARRANGE' || type === 'SX') {
-        header = 'Sắp xếp thành câu:';
-      } else if (type === 'CLASSIFY_MINI' || type === 'CHON') {
-        header = 'Bấm chọn từ bên dưới rồi xếp vào giỏ:';
-      }
-      body = text;
-    }
-
-    const formattedBody = body
+    // Định dạng làm đẹp vị trí chỗ trống điền từ (___, (...), [...])
+    const formattedBody = text
       .replace(/_{2,}/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">( ... )</span>')
       .replace(/\([\.\s]*\)/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">( ... )</span>')
       .replace(/\[\.\.\.\]/g, '<span class="text-red-600 font-black px-2 py-0.5 rounded bg-amber-100 border border-amber-300 underline font-mono">[ ... ]</span>');
 
-    return { header, body: formattedBody };
+    return { header: '', body: formattedBody };
   }
 
   // Tiện ích chuẩn hóa nội dung câu hỏi để nhận diện câu trùng
@@ -3741,7 +3691,7 @@
 
       function getProceduralMCQ(g, r, s, index) {
         const uniqueKey = g * 50000 + r * 1000 + s * 31 + index * 7;
-        
+
         if (g === 1) {
           const pools = [
             { q: `Tiếng nào chứa vần '${['iên', 'ang', 'inh', 'uông', 'ươc'][index % 5]}'?`, opts: ["Biển xanh", "Bẻm mép", "Bàng hoàng", "Sáng ngời"], c: 0, ex: "Phân biệt vần và chính tả cơ bản lớp 1." },
@@ -4093,12 +4043,12 @@
         explain: rEx3
       });
 
-      const stageLabel = roundNum <= 10 
-        ? 'Vòng Cơ Sở' 
-        : (roundNum <= 14 
-          ? 'Vòng Khu Vực' 
-          : (roundNum <= 16 
-            ? 'Vòng Tinh Hoa' 
+      const stageLabel = roundNum <= 10
+        ? 'Vòng Cơ Sở'
+        : (roundNum <= 14
+          ? 'Vòng Khu Vực'
+          : (roundNum <= 16
+            ? 'Vòng Tinh Hoa'
             : 'Vòng Tranh Tài'));
 
       return {
@@ -4386,7 +4336,7 @@
     if (nameEl) nameEl.textContent = displayName;
     if (gradeEl) gradeEl.textContent = `Lớp ${AppState.selectedGrade}`;
     if (starsEl) starsEl.textContent = AppState.stars;
-    
+
     if (avatarEl) {
       avatarEl.innerHTML = getCurrentAvatarHtml(40);
     }
@@ -5145,7 +5095,7 @@
     honorDiv.style.inset = '0';
     honorDiv.style.zIndex = '999999';
     honorDiv.className = 'bg-black/70 backdrop-blur-sm flex items-center justify-center p-4';
-    
+
     let rankName = 'Trạng Thông Thái';
     let rankEmoji = '🥈';
     if (score === 300) { rankName = 'Thủ Khoa Trạng Nhí'; rankEmoji = '👑'; }
@@ -5156,14 +5106,14 @@
       <div class="scroll-card max-w-md w-full p-6 sm:p-7 bg-white rounded-3xl text-center shadow-2xl border-4 border-amber-400 relative overflow-hidden">
         <div class="absolute -top-10 -right-10 w-28 h-28 bg-amber-200 rounded-full opacity-40 pointer-events-none"></div>
         <div class="absolute -bottom-10 -left-10 w-28 h-28 bg-red-200 rounded-full opacity-40 pointer-events-none"></div>
-        
+
         <div class="text-5xl sm:text-6xl mb-2 animate-bounce">${rankEmoji}</div>
         <div class="inline-block px-4 py-1 rounded-full bg-red-600 text-white font-black text-xs sm:text-sm mb-2 shadow">
           BẢNG VINH DANH ĐẤU TRƯỜNG • VÒNG ${roundNum}
         </div>
-        
+
         <h3 class="text-xl sm:text-2xl font-black text-amber-950 mb-1">${rankName}</h3>
-        
+
         <div class="my-4 p-4 rounded-2xl bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 border-2 border-amber-300 shadow-inner">
           <div class="text-xs uppercase tracking-wider text-amber-900 font-bold mb-1">Thí Sinh Vinh Danh</div>
           <div class="text-lg sm:text-xl font-black text-red-900 truncate">${escapeHtml(studentName || 'Học sinh')}</div>
@@ -5664,29 +5614,29 @@
 
     // 2 Chế độ thi thực tế
     const roundStages = [
-      { 
-        name: 'Chú Ong Chăm Chỉ (Chặng 1 - 6)', 
+      {
+        name: 'Chú Ong Chăm Chỉ (Chặng 1 - 6)',
         sub: '',
         range: [1, 6],
         tag: 'Ôn Tập',
         icon: '🐝'
       },
-      { 
-        name: 'Khu Vườn Kỳ Diệu (Chặng 7 - 10)', 
+      {
+        name: 'Khu Vườn Kỳ Diệu (Chặng 7 - 10)',
         sub: '',
         range: [7, 10],
         tag: 'Khu Vườn',
         icon: '🌺'
       },
-      { 
-        name: 'Mê Cung Kỳ Bí (Chặng 11 - 14)', 
+      {
+        name: 'Mê Cung Kỳ Bí (Chặng 11 - 14)',
         sub: '',
         range: [11, 14],
         tag: 'Mê Cung',
         icon: '🌀'
       },
-      { 
-        name: 'Chinh Phục Đỉnh Cao (Chặng 15 - 18)', 
+      {
+        name: 'Chinh Phục Đỉnh Cao (Chặng 15 - 18)',
         sub: '',
         range: [15, 18],
         tag: 'Đỉnh Cao',
@@ -5726,7 +5676,7 @@
             <div class="mt-2 text-2xl sm:text-3xl mb-1">${isUnlocked ? stage.icon : '🔒'}</div>
             <h4 class="font-extrabold text-slate-800 text-sm sm:text-base">Chặng ${r}</h4>
             <p class="text-[11px] text-slate-500 mt-0.5">${stage.tag} • ${isMode2 ? '30 câu' : 'Minigame'}</p>
-            
+
             <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-center">
               <span class="w-full py-1.5 px-2 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1 transition-all ${isUnlocked ? 'bg-[#FFA000] text-white hover:bg-[#FF8F00] active:scale-95' : 'bg-slate-200 text-slate-500'}">
                 <span>${isUnlocked ? (isAdmin ? 'Thi Thử' : 'Khám Phá') : 'Mở Khóa'}</span>
@@ -8922,7 +8872,7 @@
     const timeString = `${spentMinutes} phút ${spentSeconds.toString().padStart(2, '0')} giây`;
 
     AppState.game1MatchedPairs = [];
-    
+
     // Kiểm tra xem thí sinh có làm câu nào hay không
     let answeredCount = 0;
 
@@ -9142,7 +9092,7 @@
 
         <!-- 3 Thẻ bài tổng kết cổ trang (Tách biệt rõ ràng Điểm số, Thời gian, và Chuyên đề cần ôn tập) -->
         <div class="my-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-          
+
           <!-- Thẻ 1: Điểm số & Xếp hạng -->
           <div class="scroll-card p-4 bg-gradient-to-br from-amber-50 via-white to-yellow-50 border-2 border-amber-400 relative overflow-hidden shadow-md">
             <div class="absolute top-0 right-0 bg-amber-400 text-amber-950 px-3 py-0.5 rounded-bl-xl font-black text-[10px] tracking-wider uppercase">

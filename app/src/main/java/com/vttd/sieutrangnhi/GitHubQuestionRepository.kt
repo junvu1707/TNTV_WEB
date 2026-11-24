@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -23,20 +24,21 @@ import java.util.concurrent.TimeUnit
  * Repository: https://github.com/junvu1707/Trangsinhi_de
  * Cấu trúc file đề: grade_<grade>_round_<round> (ví dụ: grade_1_round_1.json tương đương Lớp 1 - Chặng 1)
  *
- * Thiết kế theo mô hình Offline-First:
- * - Đọc tức thì từ cache cục bộ (Storage/File) nếu thiết bị không có internet.
- * - Tự động kiểm tra commit SHA & đồng bộ khi GitHub repo có nội dung mới.
+ * Tối ưu hóa CDN & Manifest-based Sync:
+ * - Đọc trực tiếp manifest_free.json và manifest_vip2.json qua CDN raw.githubusercontent.com (Fastly CDN).
+ * - KHÔNG gọi REST API (api.github.com), triệt tiêu 100% rủi ro bị khóa ngạch HTTP 403 (60 req/hr).
+ * - Chỉ tải lại đúng những tệp có phiên bản mới hơn trong Manifest.
  */
 class GitHubQuestionRepository(private val context: Context) {
 
   companion object {
     private const val TAG = "GitHubQuestionRepo"
     private const val BASE_URL = "https://raw.githubusercontent.com/junvu1707/Trangsinhi_de/refs/heads/V1/"
-    private const val COMMITS_API_URL = "https://api.github.com/repos/junvu1707/Trangsinhi_de/commits?sha=V1&per_page=1"
-    private const val CONTENTS_API_URL = "https://api.github.com/repos/junvu1707/Trangsinhi_de/contents?ref=V1"
+
+    const val MANIFEST_FREE_URL = "https://raw.githubusercontent.com/junvu1707/Trangsinhi_de/refs/heads/V1/manifest_free.json"
+    const val MANIFEST_VIP2_URL = "https://raw.githubusercontent.com/junvu1707/Trangsinhi_de/refs/heads/V1/manifest_vip2.json"
 
     private const val PREFS_NAME = "github_question_sync_prefs"
-    private const val KEY_LAST_COMMIT_SHA = "last_commit_sha"
     private const val KEY_LAST_SYNC_TIME = "last_sync_time"
 
     /**
@@ -85,6 +87,10 @@ class GitHubQuestionRepository(private val context: Context) {
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
   }
 
+  private val vipPrefs: VipPreferenceManager by lazy {
+    VipPreferenceManager(context)
+  }
+
   private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   private val okHttpClient: OkHttpClient by lazy {
@@ -104,6 +110,11 @@ class GitHubQuestionRepository(private val context: Context) {
     val safeGrade = if (grade in 1..5) grade else 1
     val round = mapChangToRound(changOrRound)
     return File(cacheDir, "github_g${safeGrade}_r${round}.json")
+  }
+
+  private fun getCacheFileByName(fileName: String): File {
+    val cleanName = fileName.replace(".json", "")
+    return File(cacheDir, "${cleanName}.json")
   }
 
   /**
@@ -130,11 +141,11 @@ class GitHubQuestionRepository(private val context: Context) {
       try {
         val text = cacheFile.readText()
         if (isValidJson(text)) {
-          Log.d(TAG, "[Ưu tiên 1 - GitHub] Sử dụng đề đã tải từ GitHub (cache): ${cacheFile.name}")
+          Log.d(TAG, "[Ưu tiên 1 - GitHub Cache] Sử dụng đề đã tải từ GitHub: ${cacheFile.name}")
           return text
         }
       } catch (e: Exception) {
-        Log.e(TAG, "[Ưu tiên 1 - GitHub] Lỗi đọc cache ${cacheFile.name}: ${e.message}")
+        Log.e(TAG, "[Ưu tiên 1 - GitHub Cache] Lỗi đọc cache ${cacheFile.name}: ${e.message}")
       }
     }
     return null
@@ -155,7 +166,7 @@ class GitHubQuestionRepository(private val context: Context) {
       var lastError = "Không thể kết nối mạng"
 
       try {
-        Log.d(TAG, "[GitHub] Đang fetch đề thi từ: $url")
+        Log.d(TAG, "[GitHub CDN] Đang fetch đề thi từ: $url")
         val request = Request.Builder()
           .header("User-Agent", "TNTV-AndroidApp")
           .url(url)
@@ -165,19 +176,19 @@ class GitHubQuestionRepository(private val context: Context) {
             val bodyString = response.body?.string()
             if (isValidJson(bodyString)) {
               downloadedJson = bodyString
-              Log.d(TAG, "[GitHub] Tải và parse JSON thành công từ GitHub: $url")
+              Log.d(TAG, "[GitHub CDN] Tải và parse JSON thành công từ CDN: $url")
             } else {
               lastError = "Dữ liệu trả về không phải JSON hợp lệ"
-              Log.w(TAG, "[GitHub] $lastError từ $url")
+              Log.w(TAG, "[GitHub CDN] $lastError từ $url")
             }
           } else {
             lastError = "HTTP ${response.code} tại $url"
-            Log.w(TAG, "[GitHub] Không tải được từ GitHub: $lastError")
+            Log.w(TAG, "[GitHub CDN] Không tải được từ CDN: $lastError")
           }
         }
       } catch (e: Exception) {
         lastError = e.message ?: "Lỗi kết nối"
-        Log.w(TAG, "[GitHub] Ngoại lệ khi tải từ GitHub: $lastError")
+        Log.w(TAG, "[GitHub CDN] Ngoại lệ khi tải từ CDN: $lastError")
       }
 
       val jsonToSave = downloadedJson
@@ -186,14 +197,14 @@ class GitHubQuestionRepository(private val context: Context) {
           try {
             val cacheFile = getCacheFile(grade, changOrRound)
             cacheFile.writeText(jsonToSave)
-            Log.d(TAG, "[GitHub] Đã ghi cache thành công tại: ${cacheFile.absolutePath}")
+            Log.d(TAG, "[GitHub CDN] Đã ghi cache thành công tại: ${cacheFile.absolutePath}")
             onSuccess?.invoke(jsonToSave)
           } catch (e: Exception) {
-            Log.e(TAG, "[GitHub] Lỗi ghi file cache: ${e.message}")
+            Log.e(TAG, "[GitHub CDN] Lỗi ghi file cache: ${e.message}")
             onSuccess?.invoke(jsonToSave)
           }
         } else {
-          Log.w(TAG, "[GitHub] Fetch GitHub thất bại ($lastError). Chuyển sang ƯU TIÊN 2 (Local JSON Assets).")
+          Log.w(TAG, "[GitHub CDN] Fetch thất bại ($lastError). Chuyển sang ƯU TIÊN 2 (Local JSON Assets).")
           onError?.invoke(lastError)
         }
       }
@@ -201,8 +212,7 @@ class GitHubQuestionRepository(private val context: Context) {
   }
 
   /**
-   * Tự động kiểm tra commit SHA trên GitHub. Nếu repo có cập nhật mới (commit SHA thay đổi):
-   * Tự động quét và đồng bộ toàn bộ file đề thi của tất cả các khối lớp & chặng.
+   * Tự động kiểm tra Manifest phiên bản trên GitHub CDN và đồng bộ ngầm khi mở app.
    */
   fun syncAllGradesInBackground() {
     repositoryScope.launch {
@@ -211,7 +221,7 @@ class GitHubQuestionRepository(private val context: Context) {
   }
 
   /**
-   * Ép buộc hoặc chủ động đồng bộ đề thi mới nhất từ GitHub Repository
+   * Ép buộc hoặc chủ động đồng bộ đề thi mới nhất từ GitHub Repository dựa trên Manifest
    */
   fun syncRepoQuestions(forceRefresh: Boolean = true, onComplete: ((Boolean, String) -> Unit)? = null) {
     repositoryScope.launch {
@@ -222,116 +232,111 @@ class GitHubQuestionRepository(private val context: Context) {
     }
   }
 
+  /**
+   * Đọc Manifest tương ứng (Free hoặc VIP2) từ Fastly CDN raw.githubusercontent.com
+   */
+  private fun fetchManifestMap(isVip2OrAdmin: Boolean): Map<String, Int> {
+    val manifestUrl = if (isVip2OrAdmin) MANIFEST_VIP2_URL else MANIFEST_FREE_URL
+    val result = mutableMapOf<String, Int>()
+
+    try {
+      Log.d(TAG, "[GitHub CDN] Đang nạp Manifest từ CDN: $manifestUrl (IsVIP2/Admin=$isVip2OrAdmin)")
+      val request = Request.Builder()
+        .url(manifestUrl)
+        .header("User-Agent", "TNTV-AndroidApp")
+        .build()
+
+      okHttpClient.newCall(request).execute().use { response ->
+        if (response.isSuccessful) {
+          val body = response.body?.string() ?: ""
+          if (body.trim().startsWith("{")) {
+            val jsonObj = JSONObject(body)
+            val keys = jsonObj.keys()
+            while (keys.hasNext()) {
+              val key = keys.next()
+              val ver = jsonObj.optInt(key, 1)
+              result[key] = ver
+            }
+            Log.d(TAG, "[GitHub CDN] Nạp Manifest thành công: ${result.size} tệp đề thi")
+          }
+        } else {
+          Log.w(TAG, "[GitHub CDN] Nạp Manifest thất bại: HTTP ${response.code}")
+        }
+      }
+    } catch (e: Exception) {
+      Log.w(TAG, "[GitHub CDN] Lỗi kết nối nạp Manifest: ${e.message}")
+    }
+
+    return result
+  }
+
   private suspend fun syncRepoQuestionsInternal(forceRefresh: Boolean): Pair<Boolean, String> {
     return withContext(Dispatchers.IO) {
       try {
-        val latestSha = fetchLatestCommitSha()
-        val storedSha = prefs.getString(KEY_LAST_COMMIT_SHA, "") ?: ""
+        val userName = vipPrefs.getUserName().lowercase().trim()
+        val userEmail = vipPrefs.getUserEmail().lowercase().trim()
+        val isVip2OrAdmin = vipPrefs.isVip2() || userName == "uyenlp1310" || userEmail == "uyenlp1310" || userName == "apptest" || userEmail == "apptest"
+
         val lastSyncTime = prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
-        val timeDiff = System.currentTimeMillis() - lastSyncTime
+        val isExpired = (System.currentTimeMillis() - lastSyncTime) > (6 * 3600 * 1000L) // 6 tiếng
 
-        val hasNewCommit = latestSha.isNotBlank() && latestSha != storedSha
-        val isExpired = timeDiff > (6 * 3600 * 1000L) // 6 tiếng
-
-        if (!forceRefresh && !hasNewCommit && !isExpired && hasAnyCacheFile()) {
-          Log.d(TAG, "Đề thi trên GitHub đã ở phiên bản mới nhất (Commit: $latestSha)")
-          return@withContext Pair(true, "Ngân hàng đề thi trên GitHub đã ở phiên bản mới nhất!")
+        if (!forceRefresh && !isExpired && hasAnyCacheFile()) {
+          Log.d(TAG, "[GitHub CDN] Đã đồng bộ gần đây (<6h). Bỏ qua kiểm tra.")
+          return@withContext Pair(true, "Ngân hàng đề thi đã sẵn sàng.")
         }
 
-        Log.d(TAG, "Phát hiện cập nhật mới trên GitHub (SHA mới: $latestSha, SHA cũ: $storedSha). Tiến hành đồng bộ...")
+        val manifestMap = fetchManifestMap(isVip2OrAdmin)
+
+        if (manifestMap.isEmpty()) {
+          Log.w(TAG, "[GitHub CDN] Không nạp được Manifest. Giữ nguyên dữ liệu đề thi hiện tại.")
+          return@withContext Pair(true, "Ngân hàng đề thi trên máy đã sẵn sàng.")
+        }
 
         var updatedCount = 0
 
-        // Quét và tải song song 20 bộ đề chuẩn theo Direct Raw URL (5 Lớp x 4 Round)
+        // Duyệt qua từng file đề thi trong Manifest và so sánh phiên bản
         coroutineScope {
-          val deferreds = (1..5).flatMap { g ->
-            (1..4).map { r ->
-              async {
-                val url = getDirectRawUrl(g, r)
-                val jsonStr = downloadRawJson(url)
+          val deferreds = manifestMap.map { (fileName, onlineVersion) ->
+            async {
+              val prefKey = "ver_${fileName}"
+              val localVersion = prefs.getInt(prefKey, 0)
+              val targetCacheFile = getCacheFileByName(fileName)
+
+              val needsUpdate = forceRefresh || onlineVersion > localVersion || !targetCacheFile.exists() || targetCacheFile.length() == 0L
+
+              if (needsUpdate) {
+                val fileUrl = "${BASE_URL}${fileName}"
+                val jsonStr = downloadRawJson(fileUrl)
                 if (isValidJson(jsonStr)) {
-                  getCacheFile(g, r).writeText(jsonStr!!)
-                  Log.d(TAG, "[GitHub] Đồng bộ thành công đề Lớp $g Round $r từ GitHub")
+                  targetCacheFile.writeText(jsonStr!!)
+                  prefs.edit { putInt(prefKey, onlineVersion) }
+                  Log.d(TAG, "[GitHub CDN] Cập nhật thành công $fileName (Version $onlineVersion)")
                   true
                 } else {
                   false
                 }
+              } else {
+                false
               }
             }
           }
           updatedCount = deferreds.awaitAll().count { it }
         }
 
-        if (latestSha.isNotBlank()) {
-          prefs.edit {
-            putString(KEY_LAST_COMMIT_SHA, latestSha)
-            putLong(KEY_LAST_SYNC_TIME, System.currentTimeMillis())
-          }
-        }
+        prefs.edit { putLong(KEY_LAST_SYNC_TIME, System.currentTimeMillis()) }
 
         if (updatedCount > 0) {
-          Log.d(TAG, "Đã đồng bộ thành công $updatedCount file đề thi từ GitHub!")
+          Log.d(TAG, "Đã cập nhật thành công $updatedCount tệp đề thi mới nhất từ CDN!")
           Pair(true, "Đã tự động cập nhật $updatedCount bộ đề mới nhất từ GitHub!")
         } else {
-          Pair(true, "Đồng bộ hoàn tất. Dữ liệu đề thi đã sẵn sàng.")
+          Log.d(TAG, "Tất cả đề thi trên máy đã ở phiên bản mới nhất!")
+          Pair(true, "Ngân hàng đề thi trên GitHub đã ở phiên bản mới nhất!")
         }
       } catch (e: Exception) {
-        Log.e(TAG, "Lỗi đồng bộ câu hỏi GitHub: ${e.message}")
+        Log.e(TAG, "Lỗi đồng bộ câu hỏi GitHub CDN: ${e.message}")
         Pair(false, "Không thể kết nối tới GitHub repo: ${e.message}")
       }
     }
-  }
-
-  private fun fetchLatestCommitSha(): String {
-    return try {
-      val request = Request.Builder()
-        .url(COMMITS_API_URL)
-        .header("User-Agent", "TNTV-AndroidApp")
-        .build()
-      okHttpClient.newCall(request).execute().use { response ->
-        if (response.isSuccessful) {
-          val body = response.body?.string() ?: ""
-          if (body.startsWith("[")) {
-            val jsonArr = JSONArray(body)
-            if (jsonArr.length() > 0) {
-              jsonArr.getJSONObject(0).optString("sha", "")
-            } else ""
-          } else ""
-        } else ""
-      }
-    } catch (e: Exception) {
-      Log.w(TAG, "Không thể kiểm tra commit SHA: ${e.message}")
-      ""
-    }
-  }
-
-  private fun fetchDirectoryFilesFromGitHubApi(): Map<String, String> {
-    val result = mutableMapOf<String, String>()
-    try {
-      val request = Request.Builder()
-        .url(CONTENTS_API_URL)
-        .header("User-Agent", "TNTV-AndroidApp")
-        .build()
-      okHttpClient.newCall(request).execute().use { response ->
-        if (response.isSuccessful) {
-          val body = response.body?.string() ?: ""
-          if (body.startsWith("[")) {
-            val jsonArr = JSONArray(body)
-            for (i in 0 until jsonArr.length()) {
-              val item = jsonArr.optJSONObject(i) ?: continue
-              val name = item.optString("name", "")
-              val downloadUrl = item.optString("download_url", "")
-              if (name.isNotBlank() && downloadUrl.isNotBlank()) {
-                result[name] = downloadUrl
-              }
-            }
-          }
-        }
-      }
-    } catch (e: Exception) {
-      Log.w(TAG, "Không thể danh sách file từ GitHub API: ${e.message}")
-    }
-    return result
   }
 
   private fun downloadRawJson(url: String): String? {
@@ -359,6 +364,16 @@ class GitHubQuestionRepository(private val context: Context) {
   private fun isValidJson(str: String?): Boolean {
     if (str.isNullOrBlank()) return false
     val trimmed = str.trim()
-    return (trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    return try {
+      if (trimmed.startsWith("{")) {
+        JSONObject(trimmed)
+        true
+      } else if (trimmed.startsWith("[")) {
+        JSONArray(trimmed)
+        true
+      } else false
+    } catch (_: Exception) {
+      false
+    }
   }
 }
