@@ -1281,6 +1281,123 @@
     return '';
   }
 
+  // ==========================================
+  // [CƠ CHẾ KHÓA THIẾT BỊ FIREBASE REST API (SINGLE DEVICE LOCK)]
+  // ==========================================
+  const FIREBASE_DB_URL = 'https://trangsinhi-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  function getDeviceId() {
+    let deviceId = localStorage.getItem('TRANG_NHI_DEVICE_ID');
+    if (!deviceId) {
+      deviceId = 'DEV_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
+      try {
+        localStorage.setItem('TRANG_NHI_DEVICE_ID', deviceId);
+      } catch (e) {}
+    }
+    return deviceId;
+  }
+
+  async function checkFirebaseSessionLock(accId) {
+    if (!accId || isAdminAccount()) return { isLocked: false, canLogin: true };
+    const cleanId = String(accId).trim().toUpperCase();
+    const currentDeviceId = getDeviceId();
+
+    try {
+      const url = `${FIREBASE_DB_URL}/tntv_sessions/${cleanId}.json`;
+      const res = await fetch(url);
+      if (!res.ok) return { isLocked: false, canLogin: true };
+      const data = await res.json();
+
+      if (!data) return { isLocked: false, canLogin: true };
+
+      // Nếu tài khoản đã bị đánh dấu khóa do vi phạm 2 máy
+      if (data.isLocked) {
+        return {
+          isLocked: true,
+          canLogin: false,
+          reason: data.lockReason || 'Đăng nhập đồng thời trên 2 thiết bị'
+        };
+      }
+
+      // Nếu tài khoản đang gán cho một thiết bị khác -> Tự động đánh dấu KHÓA
+      if (data.deviceId && data.deviceId !== currentDeviceId) {
+        try {
+          await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              isLocked: true,
+              lockReason: 'Đăng nhập đồng thời trên 2 thiết bị',
+              conflictDeviceId: currentDeviceId,
+              lockedTimestamp: Date.now()
+            })
+          });
+        } catch (e) {}
+
+        return {
+          isLocked: true,
+          canLogin: false,
+          isConflict: true,
+          reason: 'Phát hiện đăng nhập trên thiết bị thứ 2'
+        };
+      }
+
+      return { isLocked: false, canLogin: true };
+    } catch (e) {
+      console.warn('Lỗi kiểm tra Firebase session:', e);
+      return { isLocked: false, canLogin: true };
+    }
+  }
+
+  async function updateFirebaseSessionActive(accId) {
+    if (!accId || isAdminAccount()) return;
+    const cleanId = String(accId).trim().toUpperCase();
+    const currentDeviceId = getDeviceId();
+
+    try {
+      const url = `${FIREBASE_DB_URL}/tntv_sessions/${cleanId}.json`;
+      await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: currentDeviceId,
+          lastActiveTimestamp: Date.now(),
+          isLocked: false,
+          lockReason: ''
+        })
+      });
+    } catch (e) {}
+  }
+
+  let firebaseHeartbeatInterval = null;
+  function startFirebaseHeartbeat() {
+    if (firebaseHeartbeatInterval) clearInterval(firebaseHeartbeatInterval);
+    firebaseHeartbeatInterval = setInterval(async () => {
+      if (AppState.loggedInAccount && AppState.loggedInAccount.id) {
+        const lockStatus = await checkFirebaseSessionLock(AppState.loggedInAccount.id);
+        if (lockStatus.isLocked) {
+          clearInterval(firebaseHeartbeatInterval);
+          firebaseHeartbeatInterval = null;
+          AppState.loggedInAccount = null;
+          AppState.isVip1 = false;
+          AppState.isVip2 = false;
+          AppState.lockedToGrade = null;
+          savePersistedState();
+          updateHeaderUI();
+          renderHome();
+          showCustomAlert(
+            `🚨 TÀI KHOẢN ĐÃ BỊ KHÓA HỆ THỐNG!\n\n` +
+            `Hệ thống phát hiện tài khoản đang được sử dụng hoặc đăng nhập đồng thời trên thiết bị thứ 2.\n\n` +
+            `Tài khoản đã bị khóa vĩnh viễn để bảo vệ bản quyền. Vui lòng liên hệ email: junvu.dev@gmail.com để được hỗ trợ mở khóa!`,
+            'Cảnh Báo Vi Phạm Thiết Bị'
+          );
+        } else {
+          updateFirebaseSessionActive(AppState.loggedInAccount.id);
+        }
+      }
+    }, 30000);
+  }
+
   function loadPersistedState() {
     try {
       const saved = localStorage.getItem('TRANG_NHI_STATE_V3') || localStorage.getItem('TRANG_NGUYEN_STATE_V2');
@@ -4903,6 +5020,10 @@
             <div>💡 <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
             <div>💡 <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
           </div>
+
+          <div class="mt-2.5 p-2.5 bg-red-50 rounded-xl border border-red-300 text-[10.5px] text-red-950 leading-relaxed font-bold shadow-xs">
+            ⚠️ <b>LƯU Ý QUAN TRỌNG:</b> Mỗi Mã ID chỉ được phép sử dụng trên <b>01 thiết bị duy nhất</b>. Tài khoản sẽ <b>TỰ ĐỘNG BỊ KHÓA VĨNH VIỄN</b> nếu hệ thống phát hiện tiếp tục đăng nhập hoặc sử dụng đồng thời trên 2 máy!
+          </div>
         </div>
       </div>
     `;
@@ -4933,7 +5054,7 @@
     }
   }
 
-  function processLogin(idInput, passInput) {
+  async function processLogin(idInput, passInput) {
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
       SoundEngine.playClick();
     }
@@ -4942,7 +5063,7 @@
     const rawPass = (passInput || '').trim();
 
     if (!rawId) {
-      showCustomAlert('Vui lòng nhập Mã ID Học sinh! (Ví dụ: l1_001 cho Lớp 1, vip2_001 cho 5 Lớp)', 'Lỗi Đăng Nhập');
+      showCustomAlert('Vui lòng nhập Mã ID Học sinh!', 'Lỗi Đăng Nhập');
       return false;
     }
 
@@ -4953,6 +5074,18 @@
 
     const lowerId = rawId.toLowerCase();
     const lowerPass = rawPass.toLowerCase();
+
+    // Kiểm tra khóa thiết bị Firebase
+    const lockCheck = await checkFirebaseSessionLock(rawId);
+    if (lockCheck.isLocked) {
+      showCustomAlert(
+        `🚨 TÀI KHOẢN ĐÃ BỊ KHÓA HỆ THỐNG!\n\n` +
+        `Hệ thống phát hiện tài khoản ${rawId.toUpperCase()} đã được đăng nhập hoặc cố tình mở trên thiết bị thứ 2.\n\n` +
+        `Tài khoản đã bị khóa vĩnh viễn để bảo vệ bản quyền. Vui lòng liên hệ email: junvu.dev@gmail.com để được hỗ trợ mở khóa!`,
+        'Tài Khoản Bị Khóa'
+      );
+      return false;
+    }
 
     // 1. Kiểm tra Tài Khoản Admin
     if (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310') {
@@ -5039,6 +5172,9 @@
       AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
 
       savePersistedState();
+      await updateFirebaseSessionActive(acc.id);
+      startFirebaseHeartbeat();
+
       if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) SoundEngine.playFanfare();
       closeModal();
       updateHeaderUI();
@@ -5134,6 +5270,8 @@
     AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
 
     savePersistedState();
+    await updateFirebaseSessionActive(acc.id);
+    startFirebaseHeartbeat();
 
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) {
       SoundEngine.playFanfare();
@@ -6114,6 +6252,11 @@
               </div>
               <div>• <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
               <div>• <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
+            </div>
+
+            <!-- Cảnh báo khóa tài khoản nếu dùng 2 máy -->
+            <div class="mt-3 p-3 bg-red-50 rounded-2xl border-2 border-red-300 text-[11px] sm:text-xs text-red-950 text-left leading-relaxed font-bold shadow-xs">
+              ⚠️ <b>LƯU Ý QUAN TRỌNG:</b> Mỗi Mã ID chỉ được phép sử dụng trên <b>01 thiết bị duy nhất</b>. Tài khoản sẽ <b>TỰ ĐỘNG BỊ KHÓA VĨNH VIỄN</b> nếu hệ thống phát hiện tiếp tục đăng nhập hoặc sử dụng đồng thời trên 2 máy!
             </div>
           </div>
 
@@ -10657,6 +10800,9 @@
       console.warn('Lỗi loadPersistedState:', e);
     }
     renderHome();
+    if (AppState.loggedInAccount && AppState.loggedInAccount.id) {
+      startFirebaseHeartbeat();
+    }
     setTimeout(() => {
       dismissSplashScreen();
     }, 2200);
