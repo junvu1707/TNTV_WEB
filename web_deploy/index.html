@@ -5179,7 +5179,13 @@
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload),
       signal: controller.signal
-    }).catch(() => {}).finally(() => clearTimeout(timeoutId));
+    }).catch(() => {
+      fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    }).finally(() => clearTimeout(timeoutId));
 
     // Hiển thị thông báo ngay lập tức trong 150ms giúp trải nghiệm cực kỳ mượt mà
     setTimeout(() => {
