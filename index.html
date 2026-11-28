@@ -4868,7 +4868,7 @@
           <form onsubmit="event.preventDefault(); submitModalLoginForm();" class="space-y-2.5 mb-3 text-left">
             <div>
               <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Email Phụ Huynh:</label>
-              <input type="email" id="modal-email-input" value="${defaultEmail}" placeholder="Ví dụ: phuhuynh@gmail.com" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              <input type="email" id="modal-email-input" value="${defaultEmail}" placeholder="Nhập email phụ huynh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
             </div>
 
             <div>
@@ -4878,12 +4878,12 @@
 
             <div>
               <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mã ID Học Sinh:</label>
-              <input type="text" id="modal-id-input" value="${defaultId}" placeholder="Ví dụ: l1_001, l2_005, vip2_001..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+              <input type="text" id="modal-id-input" value="" placeholder="Nhập Mã ID Học Sinh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
             </div>
 
             <div>
               <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu ID:</label>
-              <input type="password" id="modal-id-pass-input" value="kdepass" placeholder="kdepass" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              <input type="password" id="modal-id-pass-input" value="" placeholder="Nhập Mật Khẩu ID..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
             </div>
 
             <div class="flex items-center gap-2 pt-0.5">
@@ -4896,9 +4896,9 @@
             </button>
           </form>
 
-          <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[10.5px] text-amber-950 leading-relaxed font-medium">
-            💡 Gói VIP 1: ID <code class="bg-white px-1 rounded text-red-700 font-bold">l1_001</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) ➔ Mở 1 lớp/1 năm. <br>
-            💡 Gói VIP 2: ID <code class="bg-white px-1 rounded text-red-700 font-bold">vip2_001</code> hoặc <code class="bg-white px-1 rounded font-bold">admin</code>, <code class="bg-white px-1 rounded font-bold">apptest</code>, <code class="bg-white px-1 rounded font-bold">uyenlp1310</code> ➔ Mở Trọn Đời 5 Lớp.
+          <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[10.5px] text-amber-950 leading-relaxed font-medium space-y-1">
+            <div>💡 <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
+            <div>💡 <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
           </div>
         </div>
       </div>
@@ -4939,21 +4939,21 @@
     const rawPass = (passInput || '').trim();
 
     if (!rawId) {
-      showCustomAlert('Vui lòng nhập Mã ID! (Ví dụ: l1_001 cho Lớp 1, l2_001 cho Lớp 2)', 'Lỗi Đăng Nhập');
+      showCustomAlert('Vui lòng nhập Mã ID Học sinh! (Ví dụ: l1_001 cho Lớp 1, vip2_001 cho 5 Lớp)', 'Lỗi Đăng Nhập');
       return false;
     }
 
     if (!rawPass) {
-      showCustomAlert('Vui lòng nhập Mật khẩu! (Mật khẩu mặc định: kdepass)', 'Lỗi Đăng Nhập');
+      showCustomAlert('Vui lòng nhập Mật Khẩu ID!', 'Lỗi Đăng Nhập');
       return false;
     }
 
     const lowerId = rawId.toLowerCase();
     const lowerPass = rawPass.toLowerCase();
 
-    // Kiểm tra Admin
+    // 1. Kiểm tra Tài Khoản Admin
     if (lowerId === 'admin' || lowerId === 'apptest' || lowerId === 'uyenlp1310') {
-      if (lowerPass === 'kdepass' || lowerPass === 'adminpass' || lowerPass === 'vudung177.' || lowerPass === 'apptest' || lowerPass === 'uyenlp1310') {
+      if (lowerPass === 'kdepass' || lowerPass === 'adminpass' || lowerPass === 'vudung177.' || lowerPass === 'apptest' || lowerPass === 'uyenlp1310' || !lowerPass) {
         AppState.isAdmin = true;
         AppState.isVip1 = true;
         AppState.isVip2 = true;
@@ -4972,33 +4972,101 @@
         closeModal();
         updateHeaderUI();
         renderHome();
-        showCustomAlert(`🎉 Đăng nhập Admin ${rawId.toUpperCase()} thành công! Bạn có toàn quyền xem tất cả 5 khối lớp và 18 vòng thi.`);
+        showCustomAlert(`🎉 Đăng nhập Admin ${rawId.toUpperCase()} thành công! Bạn có toàn quyền xem tất cả 5 khối lớp.`);
         return true;
       }
     }
 
-    // Kiểm tra định dạng ID: l1_001 tới l5_99999
+    // 2. Kiểm tra Gói VIP 2 (99.000đ - 3 Năm cho cả 5 Khối Lớp): vip2_001 -> vip2_99999
+    if (lowerId.startsWith('vip2_') || lowerId === 'vip_5lap') {
+      if (lowerPass !== 'kdepass') {
+        showCustomAlert('❌ Mật khẩu ID không chính xác!', 'Mật Khẩu Sai');
+        return false;
+      }
+
+      let accountsStore = {};
+      try {
+        const storedStr = localStorage.getItem('TRANG_NHI_WEB_ACCOUNTS');
+        if (storedStr) accountsStore = JSON.parse(storedStr);
+      } catch (e) {
+        accountsStore = {};
+      }
+
+      const accountKey = lowerId;
+      let acc = accountsStore[accountKey];
+
+      if (!acc) {
+        const now = Date.now();
+        acc = {
+          id: lowerId.toUpperCase(),
+          isVip2: true,
+          firstLoginTimestamp: now,
+          expiryTimestamp: now + (3 * 365 * 24 * 60 * 60 * 1000) // 3 Năm (1095 ngày)
+        };
+        accountsStore[accountKey] = acc;
+        try {
+          localStorage.setItem('TRANG_NHI_WEB_ACCOUNTS', JSON.stringify(accountsStore));
+        } catch (e) {}
+      }
+
+      if (Date.now() > acc.expiryTimestamp) {
+        const startDateStr = formatDateVN(acc.firstLoginTimestamp);
+        const endDateStr = formatDateVN(acc.expiryTimestamp);
+        AppState.loggedInAccount = null;
+        AppState.isVip1 = false;
+        AppState.isVip2 = false;
+        AppState.lockedToGrade = null;
+        savePersistedState();
+        showCustomAlert(
+          `⚠️ Tài khoản VIP 2 (${acc.id}) đã HẾT HẠN 3 năm sử dụng!\n\n` +
+          `• Ngày kích hoạt: ${startDateStr}\n` +
+          `• Ngày hết hạn: ${endDateStr}\n\n` +
+          `Tài khoản hiện đã bị vô hiệu hóa. Vui lòng liên hệ email junvu.dev@gmail.com để kích hoạt gia hạn!`,
+          'Tài Khoản Hết Hạn'
+        );
+        return false;
+      }
+
+      AppState.loggedInAccount = acc;
+      AppState.lockedToGrade = null;
+      AppState.studentName = acc.id;
+      AppState.customAccountId = acc.id;
+      AppState.isVip1 = true;
+      AppState.isVip2 = true;
+      AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
+
+      savePersistedState();
+      if (typeof SoundEngine !== 'undefined' && SoundEngine.playFanfare) SoundEngine.playFanfare();
+      closeModal();
+      updateHeaderUI();
+      renderHome();
+
+      const daysLeft = Math.max(0, Math.ceil((acc.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)));
+      showCustomAlert(
+        `🎉 ĐĂNG NHẬP GÓI VIP 2 THÀNH CÔNG!\n\n` +
+        `👤 Mã ID: ${acc.id}\n` +
+        `📚 Mở khóa toàn bộ: 5 KHỐI LỚP (Lớp 1 - 5)\n` +
+        `⏳ Thời hạn sử dụng: 3 NĂM (${daysLeft} ngày còn lại)`,
+        'Chào Mừng Trạng Nhí!'
+      );
+      return true;
+    }
+
+    // 3. Kiểm tra Gói VIP 1 (49.000đ - 1 Năm cho 1 Khối Lớp): l1_001 tới l5_99999
     const idRegex = /^l([1-5])_(\d{1,5})$/i;
     const match = lowerId.match(idRegex);
 
     if (!match) {
       showCustomAlert(
         `❌ Mã ID không đúng định dạng!\n\n` +
-        `📌 Quy tắc ID: l<khối_lớp>_<số_thứ_tự>\n` +
-        `Ví dụ hợp lệ:\n` +
-        `• l1_001 (Lớp 1 - Số 001)\n` +
-        `• l2_00001 (Lớp 2 - Số 00001)\n` +
-        `• l3_050 (Lớp 3 - Số 050)\n` +
-        `• l4_99999 (Lớp 4 - Số 99999)\n` +
-        `• l5_100 (Lớp 5 - Số 100)\n\n` +
-        `Mỗi lớp đánh số từ 00001 đến 99999.`,
+        `Vui lòng nhập đúng Mã ID được cấp hoặc liên hệ email junvu.dev@gmail.com để nhận Mã ID kích hoạt!`,
         'ID Không Hợp Lệ'
       );
       return false;
     }
 
     if (lowerPass !== 'kdepass') {
-      showCustomAlert(`❌ Mật khẩu không chính xác!\nMật khẩu mặc định là: kdepass`, 'Mật Khẩu Sai');
+      showCustomAlert(`❌ Mật khẩu ID không chính xác!`, 'Mật Khẩu Sai');
       return false;
     }
 
@@ -5006,7 +5074,7 @@
     const idNumber = parseInt(match[2], 10);
 
     if (idNumber < 1 || idNumber > 99999) {
-      showCustomAlert(`❌ Số thứ tự ID phải nằm trong khoảng từ 00001 đến 99999!`, 'ID Không Hợp Lệ');
+      showCustomAlert(`❌ Số thứ tự ID không hợp lệ!`, 'ID Không Hợp Lệ');
       return false;
     }
 
@@ -5024,10 +5092,10 @@
     if (!acc) {
       const now = Date.now();
       acc = {
-        id: lowerId,
+        id: lowerId.toUpperCase(),
         grade: assignedGrade,
         firstLoginTimestamp: now,
-        expiryTimestamp: now + (365 * 24 * 60 * 60 * 1000)
+        expiryTimestamp: now + (365 * 24 * 60 * 60 * 1000) // 1 Năm (365 ngày)
       };
       accountsStore[accountKey] = acc;
       try {
@@ -5038,11 +5106,16 @@
     if (Date.now() > acc.expiryTimestamp) {
       const startDateStr = formatDateVN(acc.firstLoginTimestamp);
       const endDateStr = formatDateVN(acc.expiryTimestamp);
+      AppState.loggedInAccount = null;
+      AppState.isVip1 = false;
+      AppState.isVip2 = false;
+      AppState.lockedToGrade = null;
+      savePersistedState();
       showCustomAlert(
-        `⚠️ Tài khoản ${acc.id.toUpperCase()} đã HẾT HẠN 1 năm sử dụng!\n\n` +
-        `• Ngày đăng nhập đầu: ${startDateStr}\n` +
+        `⚠️ Tài khoản VIP 1 (${acc.id}) đã HẾT HẠN 1 năm sử dụng!\n\n` +
+        `• Ngày kích hoạt: ${startDateStr}\n` +
         `• Ngày hết hạn: ${endDateStr}\n\n` +
-        `Vui lòng liên hệ quản trị viên để gia hạn sử dụng.`,
+        `Tài khoản hiện đã bị vô hiệu hóa. Vui lòng liên hệ email junvu.dev@gmail.com để kích hoạt gia hạn!`,
         'Tài Khoản Hết Hạn'
       );
       return false;
@@ -5051,9 +5124,10 @@
     AppState.loggedInAccount = acc;
     AppState.lockedToGrade = assignedGrade;
     AppState.selectedGrade = assignedGrade;
-    AppState.studentName = acc.id.toUpperCase();
-    AppState.customAccountId = acc.id.toUpperCase();
+    AppState.studentName = acc.id;
+    AppState.customAccountId = acc.id;
     AppState.isVip1 = true;
+    AppState.isVip2 = false;
     AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
 
     savePersistedState();
@@ -5986,7 +6060,7 @@
                 <label class="block text-xs font-black text-slate-800 uppercase mb-1">
                   Email Đăng Ký Phụ Huynh:
                 </label>
-                <input type="email" id="gate-email-input" value="${defaultEmail}" placeholder="Ví dụ: phuhuynh@gmail.com..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+                <input type="email" id="gate-email-input" value="${defaultEmail}" placeholder="Nhập email phụ huynh..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
               </div>
 
               <!-- 2. Mật Khẩu Email (Khóa Phụ Huynh) -->
@@ -6003,7 +6077,7 @@
                   Mã ID Học Sinh:
                 </label>
                 <div class="relative">
-                  <input type="text" id="gate-id-input" value="${defaultId}" placeholder="Ví dụ: l1_001, l2_005, vip2_001, admin..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-black text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+                  <input type="text" id="gate-id-input" value="" placeholder="Nhập Mã ID Học Sinh..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-black text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
                   <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">Lớp 1 - 5</span>
                 </div>
               </div>
@@ -6013,7 +6087,7 @@
                 <label class="block text-xs font-black text-slate-800 uppercase mb-1">
                   Mật Khẩu ID:
                 </label>
-                <input type="password" id="gate-id-pass-input" value="kdepass" placeholder="kdepass (Tài khoản Admin không cần mật khẩu ID)" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+                <input type="password" id="gate-id-pass-input" value="" placeholder="Nhập Mật Khẩu ID..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
               </div>
 
               <!-- 5. Checkbox Ghi nhớ đăng nhập -->
@@ -6031,12 +6105,12 @@
             </form>
 
             <!-- Hướng dẫn quy tắc ID -->
-            <div class="p-3 bg-amber-100/80 rounded-2xl border border-amber-300 text-[11px] sm:text-xs text-amber-950 text-left leading-relaxed font-medium shadow-xs space-y-1">
+            <div class="p-3 bg-amber-100/80 rounded-2xl border border-amber-300 text-[11px] sm:text-xs text-amber-950 text-left leading-relaxed font-medium shadow-xs space-y-1.5">
               <div class="font-extrabold text-red-900 flex items-center gap-1">
-                <span>💡</span> Quy tắc Mã ID & Phân Quyền:
+                <span>💡</span> Thông Tin Gói VIP Học Sinh:
               </div>
-              <div>• <b>VIP 1 (1 Khối Lớp - 1 Năm):</b> Nhập ID <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">l1_001</code> đến <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">l5_99999</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) ➔ Mở 18 vòng thi của 1 khối lớp trong 1 năm.</div>
-              <div>• <b>VIP 2 Trọn Đời (5 Khối Lớp):</b> Nhập ID <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">vip2_001</code> đến <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">vip2_99999</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) hoặc <code class="bg-white px-1 rounded font-bold">admin</code>, <code class="bg-white px-1 rounded font-bold">apptest</code>, <code class="bg-white px-1 rounded font-bold">uyenlp1310</code> (Không cần mật khẩu ID) ➔ Mở TRỌN ĐỜI cả 5 khối Lớp.</div>
+              <div>• <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
+              <div>• <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
             </div>
           </div>
 
@@ -6241,8 +6315,8 @@
             <div class="flex items-center gap-2.5">
               <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
               <div>
-                <h4 class="font-black text-xs sm:text-sm text-yellow-100">Đăng Nhập Mã ID Học Sinh (Ví dụ: l1_001, l2_001...)</h4>
-                <p class="text-[11px] text-white/90">Mở khóa trọn bộ 18 vòng thi của khối lớp đó trong <b>1 năm (365 ngày)</b> từ ngày đầu tiên đăng nhập. Mật khẩu: <b>kdepass</b></p>
+                <h4 class="font-black text-xs sm:text-sm text-yellow-100">Yêu Cầu Đăng Nhập Tài Khoản Học Sinh</h4>
+                <p class="text-[11px] text-white/90">Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b>junvu.dev@gmail.com</b> để kích hoạt tài khoản!</p>
               </div>
             </div>
             <button onclick="openLoginModal()" class="btn-3d btn-3d-gold px-4 py-2 rounded-xl text-amber-950 font-black text-xs whitespace-nowrap shadow shrink-0">
@@ -6557,7 +6631,7 @@
     } else {
       if (!AppState.loggedInAccount) {
         showCustomConfirm(
-          `Vòng thi này yêu cầu Đăng Nhập Mã ID Học Sinh (Ví dụ: l1_001 tới l5_99999, mật khẩu: kdepass) để mở khóa toàn bộ 18 vòng thi trong 1 năm!\n\nBạn có muốn đăng nhập ngay?`,
+          `Vòng thi này yêu cầu Đăng Nhập.\n\nVui lòng liên hệ email: junvu.dev@gmail.com để kích hoạt tài khoản!\n\nBạn có muốn đăng nhập ngay?`,
           () => openLoginModal(),
           null,
           'Yêu Cầu Đăng Nhập'
