@@ -1217,10 +1217,6 @@
     selectedGrade: 1,      // Lớp 1 - 5 (mặc định Lớp 1)
     studentName: 'Siêu Trạng Nhí', // Tên học sinh mặc định
     customAccountId: '',   // ID tài khoản do người dùng input (nếu có)
-  const AppState = {
-    selectedGrade: 1,      // Lớp 1 - 5 (mặc định Lớp 1)
-    studentName: 'Siêu Trạng Nhí', // Tên học sinh mặc định
-    customAccountId: '',   // ID tài khoản do người dùng input (nếu có)
     loggedInAccount: null, // Tài khoản Web ID (l1_001...), grade, firstLoginTimestamp, expiryTimestamp
     lockedToGrade: null,   // Khóa cứng khối lớp đã kích hoạt (1 - 5)
     rememberLogin: true,   // Ghi nhớ đăng nhập
@@ -4925,18 +4921,6 @@
 
     processLoginGate(id, idPass, email, emailPass, rememberMe);
   }
-            <ul class="space-y-0.5 list-disc list-inside">
-              <li><b>Mã ID:</b> <code class="bg-white px-1 rounded text-red-700 font-bold">l&lt;lớp&gt;_&lt;số&gt;</code> (l1_001 cho Lớp 1, l2_001 cho Lớp 2...)</li>
-              <li><b>Số thứ tự:</b> Đánh số từ 00001 tới 99999 cho mỗi khối lớp.</li>
-              <li><b>Mật khẩu:</b> <code class="bg-white px-1 rounded text-red-700 font-bold">kdepass</code></li>
-              <li><b>Thời hạn:</b> Mở khóa duy nhất khối lớp đó trong <b>1 năm (365 ngày)</b> từ ngày đăng nhập đầu tiên.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    `;
-    safeCreateIcons();
-  }
 
   function submitLoginForm() {
     const idEl = document.getElementById('login-id-input');
@@ -6333,7 +6317,6 @@
 
     safeCreateIcons();
     updateHeaderUI();
-  }
   }
 
   function openDisclaimerModal() {
