@@ -5133,7 +5133,7 @@
     }
   }
 
-  async function submitVipRegistration() {
+  function submitVipRegistration() {
     const emailEl = document.getElementById('reg-email');
     const phoneEl = document.getElementById('reg-phone');
     const gradeEl = document.getElementById('reg-grade');
@@ -5159,39 +5159,36 @@
       submitBtn.innerText = '⏳ Đang gửi yêu cầu...';
     }
 
-    const templateParams = {
-      to_email: 'junvu.dev@gmail.com',
-      parent_email: email,
-      phone: phone,
-      grade: `Lớp ${grade}`,
-      vip_package: pkg,
-      bank_info: 'VPBank - STK 0972170786 - NGUYEN THI LAN',
-      timestamp: new Date().toLocaleString('vi-VN')
+    // Gửi ngầm không chặn luồng UI (Non-blocking Fast Submission)
+    const payload = {
+      _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP: ${pkg} - SĐT ${phone}`,
+      _captcha: 'false',
+      _template: 'table',
+      Email_Phu_Huynh: email,
+      So_Dien_Thoai_Zalo: phone,
+      Khoi_Lop: `Lớp ${grade}`,
+      Goi_VIP_Dang_Ky: pkg,
+      Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
     };
 
-    try {
-      await sendViaEmailJS(templateParams);
-      await fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP: ${pkg} - SĐT ${phone}`,
-          _captcha: 'false',
-          _template: 'table',
-          Email_Phu_Huynh: email,
-          So_Dien_Thoai_Zalo: phone,
-          Khoi_Lop: `Lớp ${grade}`,
-          Goi_VIP_Dang_Ky: pkg,
-          Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
-        })
-      });
-    } catch (e) {}
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    closeModal();
-    showCustomAlert(
-      `🎉 Đã gửi yêu cầu thành công. Đội ngũ admin sẽ liên hệ lại cho bạn ngay!`,
-      'Đăng Ký VIP Thành Công'
-    );
+    fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    }).catch(() => {}).finally(() => clearTimeout(timeoutId));
+
+    // Hiển thị thông báo ngay lập tức trong 150ms giúp trải nghiệm cực kỳ mượt mà
+    setTimeout(() => {
+      closeModal();
+      showCustomAlert(
+        `🎉 Đã gửi yêu cầu thành công. Đội ngũ admin sẽ liên hệ lại cho bạn ngay!`,
+        'Đăng Ký VIP Thành Công'
+      );
+    }, 150);
   }
 
   function submitModalLoginForm() {
