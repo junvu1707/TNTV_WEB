@@ -5126,6 +5126,8 @@
       submitBtn.innerText = '⏳ Đang gửi yêu cầu...';
     }
 
+    const autoResponseMsg = `Kính gửi Phụ huynh,\n\nCảm ơn bạn đã đăng ký gói học tập ${pkg} trên Siêu Trạng Nhí Tiếng Việt!\n\n🏦 THÔNG TIN CHUYỂN KHOẢN THANH TOÁN:\n• Ngân hàng: VPBank\n• Số tài khoản: 0972170786\n• Chủ tài khoản: NGUYEN THI LAN\n• Nội dung chuyển khoản: TNTV ${phone}\n\n📲 HƯỚNG DẪN KÍCH HOẠT:\nSau khi chuyển khoản, phụ huynh gửi ảnh chụp màn hình Bill qua Zalo SĐT 0972.170.786 hoặc phản hồi lại Email này, Admin sẽ gửi Mã VIP kích hoạt ngay trong 3 phút!\n\nTrân trọng,\nBan Quản Trị Siêu Trạng Nhí Tiếng Việt`;
+
     try {
       await fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
         method: 'POST',
@@ -5137,10 +5139,12 @@
           _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP: ${pkg} - SĐT ${phone}`,
           _captcha: 'false',
           _template: 'table',
+          _autoresponse: autoResponseMsg,
           Email_Phu_Huynh: email,
           So_Dien_Thoai_Zalo: phone,
           Khoi_Lop: `Lớp ${grade}`,
           Goi_VIP_Dang_Ky: pkg,
+          Thong_Tin_Chuyen_Khoan: 'VPBank - 0972170786 - NGUYEN THI LAN',
           Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
         })
       });
@@ -5149,9 +5153,10 @@
       showCustomAlert(
         `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
         `• Email: ${email}\n` +
-        `• SĐT: ${phone}\n` +
-        `• Gói: ${pkg}\n\n` +
-        `Đội ngũ Admin sẽ liên hệ sớm nhất theo thông tin đã đăng ký!`,
+        `• SĐT Zalo: ${phone}\n` +
+        `• Gói VIP: ${pkg}\n\n` +
+        `📩 Email chứa THÔNG TIN CHUYỂN KHOẢN (VPBank - 0972170786 - NGUYEN THI LAN) đã được gửi tự động tới hòm thư ${email}.\n\n` +
+        `Đội ngũ Admin sẽ liên hệ qua Zalo/SĐT ${phone} để gửi Mã VIP cho bạn ngay!`,
         'Đăng Ký VIP Thành Công'
       );
     } catch (e) {
@@ -5159,9 +5164,10 @@
       showCustomAlert(
         `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
         `• Email: ${email}\n` +
-        `• SĐT: ${phone}\n` +
-        `• Gói: ${pkg}\n\n` +
-        `Đội ngũ Admin sẽ liên hệ sớm nhất theo thông tin đã đăng ký!`,
+        `• SĐT Zalo: ${phone}\n` +
+        `• Gói VIP: ${pkg}\n\n` +
+        `📩 Thông tin thanh toán (VPBank - 0972170786 - NGUYEN THI LAN) đã được lưu.\n\n` +
+        `Đội ngũ Admin sẽ liên hệ qua Zalo/SĐT ${phone} để gửi Mã VIP cho bạn ngay!`,
         'Đăng Ký VIP Thành Công'
       );
     }
