@@ -1272,6 +1272,16 @@
     roundAnswersHistory: []
   };
 
+  function getLoggedInAccId() {
+    if (typeof AppState !== 'undefined' && AppState && AppState.loggedInAccount && typeof AppState.loggedInAccount === 'object' && AppState.loggedInAccount.id) {
+      return String(AppState.loggedInAccount.id).toUpperCase();
+    }
+    if (typeof AppState !== 'undefined' && AppState && AppState.customAccountId) {
+      return String(AppState.customAccountId).toUpperCase();
+    }
+    return '';
+  }
+
   function loadPersistedState() {
     try {
       const saved = localStorage.getItem('TRANG_NHI_STATE_V3') || localStorage.getItem('TRANG_NGUYEN_STATE_V2');
@@ -10587,12 +10597,15 @@
 
   // Khởi động
   window.addEventListener('DOMContentLoaded', () => {
-    loadPersistedState();
-    if ((AppState.loggedInAccount && AppState.rememberLogin) || isAdminAccount()) {
-      renderHome();
-    } else {
-      renderLoginGate();
+    try {
+      loadPersistedState();
+    } catch (e) {
+      console.warn('Lỗi loadPersistedState:', e);
     }
+    renderHome();
+    setTimeout(() => {
+      dismissSplashScreen();
+    }, 2200);
   });
   </script>
 </body>
