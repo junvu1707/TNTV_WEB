@@ -4483,10 +4483,10 @@
 
   function isRoundUnlocked(roundNum) {
     if (isAdminAccount()) return true;
-    if (AppState.loggedInAccount && AppState.loggedInAccount.grade === AppState.selectedGrade) return true;
-    if (roundNum <= 3) return true;
-    if (AppState.isVip1 || AppState.isVip2) return true;
-    return !!(AppState.singlePlayTickets && AppState.singlePlayTickets[roundNum]);
+    if (roundNum <= 3) return true; // Chỉ mở 3 vòng đầu miễn phí
+    if (AppState.isVip2) return true; // VIP 2 mở cả 5 khối lớp
+    if (AppState.isVip1 && AppState.loggedInAccount && (AppState.lockedToGrade === AppState.selectedGrade || AppState.loggedInAccount.grade === AppState.selectedGrade)) return true;
+    return false; // Vòng 4-18 cần có ID do Admin kích hoạt!
   }
 
   function updateHeaderUI() {
@@ -4677,12 +4677,7 @@
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-red-600 text-yellow-200 font-black text-[10px] shadow-sm border border-yellow-300">
                     👑 Admin: Mở khóa tất cả
                   </span>
-                ` : `
-                  <button onclick="watchRewardedAdForStars(30)" class="btn-3d btn-3d-green px-2.5 py-1 rounded-xl text-white font-black text-[11px] shadow flex items-center justify-center gap-1 active:scale-95 transition-all" title="Xem 1 video ngắn nhận ngay 30 sao đổi hình mẫu">
-                    <span>🎬</span>
-                    <span>+30 ⭐ (Xem Video)</span>
-                  </button>
-                `}
+                ` : ''}
               </div>
             </div>
           </div>
@@ -4887,14 +4882,6 @@
               <span class="bg-amber-200/90 text-red-700 px-2.5 py-0.5 rounded-full font-black text-xs">${lb.price || 500} ⭐</span>
             </button>
 
-            <!-- 3. Xem video dùng thử -->
-            <button onclick="watchRewardedAdForChibi('${lb.id}')" class="btn-3d btn-3d-green w-full py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm text-white shadow flex items-center justify-between gap-2 active:scale-95">
-              <span class="flex items-center gap-1.5">
-                <span>🎬</span>
-                <span>Xem Video Dùng Thử</span>
-              </span>
-              <span class="bg-emerald-700/80 text-white px-2 py-0.5 rounded-full font-extrabold text-[10px]">Miễn phí</span>
-            </button>
           </div>
 
           <button onclick="openAvatarModal()" class="w-full py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs active:scale-95 transition-all">
@@ -6432,19 +6419,14 @@
           <!-- Cụm Phải: Ngang Hàng Tên App - Khối Yêu Cầu Đăng Nhập / Trạng Thái Tài Khoản -->
           <div class="flex-1 w-full lg:w-auto min-w-0">
             ${!AppState.loggedInAccount ? `
-              <div class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3 border-2 border-amber-300">
-                <div class="flex items-center gap-2.5 min-w-0 text-left">
-                  <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
-                  <div class="min-w-0">
-                    <h4 class="font-black text-xs sm:text-sm text-yellow-100 uppercase tracking-wide">Yêu Cầu Đăng Nhập Tài Khoản</h4>
-                    <p class="text-[11px] sm:text-xs text-white/95 leading-relaxed font-medium mt-0.5">
-                      Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b class="underline font-bold">junvu.dev@gmail.com</b> để kích hoạt!
-                    </p>
-                  </div>
+              <div onclick="openLoginModal()" class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex items-center gap-3 border-2 border-amber-300 cursor-pointer hover:brightness-105 transition-all">
+                <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
+                <div class="min-w-0 text-left">
+                  <h4 class="font-black text-xs sm:text-sm text-yellow-100 uppercase tracking-wide">Yêu Cầu Đăng Nhập Tài Khoản</h4>
+                  <p class="text-[11px] sm:text-xs text-white/95 leading-relaxed font-medium mt-0.5">
+                    Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b class="underline font-bold">junvu.dev@gmail.com</b> để kích hoạt!
+                  </p>
                 </div>
-                <button onclick="openLoginModal()" class="btn-3d btn-3d-gold px-4 py-2 rounded-xl text-amber-950 font-black text-xs whitespace-nowrap shadow shrink-0 active:scale-95">
-                  Đăng Nhập Ngay 🚀
-                </button>
               </div>
             ` : `
               <div class="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-sm text-xs font-medium text-left">
@@ -6759,16 +6741,12 @@
         showRoundExamPickerModal(roundNum);
       }
     } else {
-      if (!AppState.loggedInAccount) {
-        showCustomConfirm(
-          `Vòng thi này yêu cầu Đăng Nhập.\n\nVui lòng liên hệ email: junvu.dev@gmail.com để kích hoạt tài khoản!\n\nBạn có muốn đăng nhập ngay?`,
-          () => openLoginModal(),
-          null,
-          'Yêu Cầu Đăng Nhập'
-        );
-      } else {
-        openUnlockRoundModal(roundNum);
-      }
+      showCustomConfirm(
+        `Vòng thi này hiện đang BỊ KHÓA.\n\nĐể mở khóa từ Vòng 4 đến Vòng 18, vui lòng liên hệ ADMIN Email: junvu.dev@gmail.com để được kích hoạt tài khoản!\n\nBạn có muốn đăng nhập ngay?`,
+        () => openLoginModal(),
+        null,
+        'Yêu Cầu Đăng Nhập Kích Hoạt'
+      );
     }
   }
 
@@ -9878,12 +9856,8 @@
             </button>
           </div>
 
-          <!-- Hàng 2: Nút Xem Video nhận Sao + Nút Tủ Đồ Chibi đặt ngay cạnh dưới Trang chủ & Thi đề khác -->
+          <!-- Hàng 2: Nút Tủ Đồ Chibi -->
           <div class="flex items-center justify-center gap-2 pt-0.5">
-            <button onclick="watchRewardedAdForStars(30)" class="btn-3d btn-3d-green px-3 sm:px-4 py-1.5 rounded-xl font-black text-white text-xs flex items-center gap-1.5 shadow active:scale-95 transition-all">
-              <span>🎬</span>
-              <span>+30 ⭐ (Xem Video)</span>
-            </button>
             <button onclick="openAvatarModal()" class="btn-3d btn-3d-red px-3 sm:px-4 py-1.5 rounded-xl font-black text-white text-xs flex items-center gap-1.5 shadow active:scale-95 transition-all">
               <span>🖼️</span>
               <span>Cửa Hàng Hình Mẫu (⭐ ${AppState.stars})</span>
@@ -10186,28 +10160,18 @@
 
   // Hàm kiểm tra Frequency Capping cho Vòng Miễn Phí (Cứ 2 chặng nộp bài hoàn thành mới hiển thị 1 lần Interstitial Ad)
   function checkAndTriggerInterstitialForFreeRound(onDone) {
-    if (AppState.isVip2 || isAdminAccount()) {
-      onDone();
-      return;
-    }
-    const count = AppState.completedFreeRoundsCount || 0;
-    if (count > 0 && count % 2 === 0) {
-      showInterstitialAd(onDone);
-    } else {
-      onDone();
-    }
+    if (typeof onDone === 'function') onDone();
+  }
+
+  function showInterstitialAd(onDone) {
+    if (typeof onDone === 'function') onDone();
   }
 
   function onFinishScreenGoHome() {
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
       SoundEngine.playClick();
     }
-    const isFreeRound = (AppState.currentRoundNum <= 6);
-    if (isFreeRound) {
-      checkAndTriggerInterstitialForFreeRound(() => renderHome());
-    } else {
-      renderHome();
-    }
+    renderHome();
   }
 
   function restartExamWithNewSeed() {
@@ -10223,15 +10187,10 @@
 
     AppState.currentSeed = nextSeed;
 
-    const isLockedRound = (AppState.currentRoundNum > 6);
-    const isVip = AppState.isVip2 || isAdminAccount();
-
-    if (isLockedRound && !isVip) {
-      // Vòng thi khóa: Sau khi nộp bài muốn vào đề thi mới cũng xem video Rewarded Ad để nhận lượt
-      openUnlockRoundModal(AppState.currentRoundNum);
+    if (isRoundUnlocked(AppState.currentRoundNum)) {
+      startRoundExam(AppState.currentRoundNum, nextSeed);
     } else {
-      // Vòng thi miễn phí: Áp dụng Frequency Capping (cứ 2 chặng nộp bài mới hiện Interstitial Ad 1 lần)
-      checkAndTriggerInterstitialForFreeRound(() => startRoundExam(AppState.currentRoundNum, nextSeed));
+      openUnlockRoundModal(AppState.currentRoundNum);
     }
   }
 
@@ -10239,36 +10198,12 @@
   // [BLOCK 5: MONETIZATION & MODALS]
   // ==========================================
   function openUnlockRoundModal(roundNum) {
-    const modalContainer = document.getElementById('modal-container');
-    modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="scroll-card max-w-sm w-full p-5 sm:p-6 bg-white border-4 border-amber-400 relative shadow-2xl">
-          <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-
-          <div class="text-center mb-4">
-            <div class="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-2 text-3xl border-2 border-amber-300 shadow-sm animate-pulse">
-              🎟️
-            </div>
-            <h3 class="text-base sm:text-lg font-black text-red-900">Mở 1 Lượt Thi Vòng ${roundNum}</h3>
-            <p class="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
-              Vòng thi này mở khóa theo <b>1 lượt chơi miễn phí</b> khi xem một video quảng cáo ngắn (Google AdMob). Sau khi thi xong, lần sau bé lại xem video, hoặc nâng cấp VIP để chơi trọn đời không giới hạn.
-            </p>
-          </div>
-
-          <div class="space-y-2.5">
-            <button onclick="startRewardedAdForRound(${roundNum})" class="btn-3d btn-3d-green w-full text-white text-xs font-black py-2.5 rounded-xl flex items-center justify-center gap-2 shadow">
-              <span>🎬 Xem Video (Nhận 1 Lượt Thi)</span>
-            </button>
-            <button onclick="openVipModal()" class="btn-3d btn-3d-gold w-full text-amber-950 text-xs font-black py-2.5 rounded-xl flex items-center justify-center gap-2 shadow">
-              <span>👑 Nâng Cấp VIP (Mở 18 Vòng Trọn Đời)</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    safeCreateIcons();
+    showCustomConfirm(
+      `Vòng thi này hiện đang BỊ KHÓA.\n\nĐể mở khóa từ Vòng 4 đến Vòng 18, vui lòng liên hệ ADMIN Email: junvu.dev@gmail.com để được kích hoạt tài khoản!\n\nBạn có muốn đăng nhập ngay?`,
+      () => openLoginModal(),
+      null,
+      'Yêu Cầu Đăng Nhập Kích Hoạt'
+    );
   }
 
   function openVipModal() {
