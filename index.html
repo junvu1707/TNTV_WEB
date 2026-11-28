@@ -5005,10 +5005,22 @@
             </div>
           </div>
 
-          <!-- TAB 2: FORM ĐĂNG KÝ MUA VIP (GỬI TỰ ĐỘNG VỀ EMAIL ADMIN) -->
+          <!-- TAB 2: FORM ĐĂNG KÝ MUA VIP (GỬI TỰ ĐỘNG VỀ EMAIL ADMIN + LỰA CHỌN ZALO) -->
           <div id="auth-tab-register-content" class="hidden text-left">
+            <!-- Nút bấm Zalo nhanh -->
+            <a href="https://zalo.me/0972170786" target="_blank" class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl flex items-center justify-between gap-2 shadow-md mb-3 active:scale-95 transition-all text-xs font-black no-underline">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">💬</span>
+                <div>
+                  <div class="text-yellow-300 font-extrabold uppercase">Nhắn Zalo Nhận Mã Kích Hoạt Ngay</div>
+                  <div class="text-[11px] text-white/90 font-medium">SĐT / Zalo Admin: 0972.170.786</div>
+                </div>
+              </div>
+              <span class="bg-white text-blue-900 px-3 py-1.5 rounded-xl text-[11px] font-black shrink-0 shadow-xs">Mở Zalo ➔</span>
+            </a>
+
             <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-300 text-emerald-950 text-xs font-medium mb-3">
-              🎉 Điền thông tin dưới đây để đăng ký nhận Mã VIP kích hoạt ngay trong 5 phút!
+              🎉 Hoặc điền thông tin dưới đây để đăng ký, Admin sẽ chủ động liên hệ gửi Mã VIP cho bạn:
             </div>
 
             <form onsubmit="event.preventDefault(); submitVipRegistration();" class="space-y-2.5 mb-3">
@@ -5122,11 +5134,13 @@
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP mới: ${pkg} - SĐT ${phone}`,
+          _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP: ${pkg} - SĐT ${phone}`,
+          _captcha: 'false',
+          _template: 'table',
           Email_Phu_Huynh: email,
-          So_Dien_Thoai: phone,
+          So_Dien_Thoai_Zalo: phone,
           Khoi_Lop: `Lớp ${grade}`,
-          Goi_Dang_Ky: pkg,
+          Goi_VIP_Dang_Ky: pkg,
           Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
         })
       });
@@ -5134,19 +5148,21 @@
       closeModal();
       showCustomAlert(
         `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
-        `• Email Phụ Huynh: ${email}\n` +
-        `• Số Điện Thoại Zalo: ${phone}\n` +
-        `• Gói Đăng Ký: ${pkg}\n\n` +
-        `Thông tin đã được chuyển tới Admin (junvu.dev@gmail.com). Đội ngũ Admin sẽ liên hệ qua Zalo/Email ${phone} để gửi Mã VIP kích hoạt ngay trong 5 phút!`,
+        `• Email: ${email}\n` +
+        `• SĐT: ${phone}\n` +
+        `• Gói: ${pkg}\n\n` +
+        `Đội ngũ Admin sẽ liên hệ sớm nhất theo thông tin đã đăng ký!`,
         'Đăng Ký VIP Thành Công'
       );
     } catch (e) {
       closeModal();
       showCustomAlert(
-        `🎉 Đã ghi nhận thông tin đăng ký thành công!\n\n` +
-        `• Email: ${email}\n• SĐT Zalo: ${phone}\n• Gói: ${pkg}\n\n` +
-        `Admin sẽ liên hệ gửi Mã VIP qua SĐT/Zalo ${phone} trong giây lát!`,
-        'Đăng Ký VIP'
+        `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
+        `• Email: ${email}\n` +
+        `• SĐT: ${phone}\n` +
+        `• Gói: ${pkg}\n\n` +
+        `Đội ngũ Admin sẽ liên hệ sớm nhất theo thông tin đã đăng ký!`,
+        'Đăng Ký VIP Thành Công'
       );
     }
   }
@@ -6546,7 +6562,7 @@
                 <div class="min-w-0 text-left">
                   <h4 class="font-black text-xs sm:text-sm text-yellow-100 uppercase tracking-wide">Yêu Cầu Đăng Nhập Tài Khoản</h4>
                   <p class="text-[11px] sm:text-xs text-white/95 leading-relaxed font-medium mt-0.5">
-                    Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b class="underline font-bold">junvu.dev@gmail.com</b> để kích hoạt!
+                    Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ Zalo/SĐT: <b class="underline font-bold">0972.170.786</b> hoặc Email: <b class="underline font-bold">junvu.dev@gmail.com</b>!
                   </p>
                 </div>
               </div>
@@ -6607,8 +6623,11 @@
 
       <!-- CHÂN TRANG & THÔNG TIN PHÁP LÝ (CHUẨN GOOGLE PLAY POLICY) -->
       <footer class="mt-8 pt-6 pb-6 border-t-2 border-amber-300/60 text-center text-xs text-slate-500">
-        <p class="font-medium text-slate-600 mb-2.5">
+        <p class="font-medium text-slate-600 mb-2">
           Siêu Trạng Nhí Tiếng Việt • Nền tảng học tập & rèn luyện tiếng Việt độc lập cho Học sinh & Giáo viên GDPT
+        </p>
+        <p class="font-black text-emerald-800 text-xs sm:text-sm mb-2.5">
+          📞 Hotline / Zalo hỗ trợ kích hoạt Mã VIP: <a href="https://zalo.me/0972170786" target="_blank" class="text-red-700 underline hover:text-red-800 font-black">0972.170.786</a> | Email: <span class="text-slate-700 font-bold">junvu.dev@gmail.com</span>
         </p>
         <div class="flex flex-col items-center justify-center gap-1.5 mb-2">
           <button onclick="openDisclaimerModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border-2 border-emerald-400 shadow-sm text-emerald-900 font-extrabold hover:bg-emerald-50 active:scale-95 transition-all text-xs">
