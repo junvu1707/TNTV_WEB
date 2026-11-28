@@ -1217,8 +1217,17 @@
     selectedGrade: 1,      // Lớp 1 - 5 (mặc định Lớp 1)
     studentName: 'Siêu Trạng Nhí', // Tên học sinh mặc định
     customAccountId: '',   // ID tài khoản do người dùng input (nếu có)
+  const AppState = {
+    selectedGrade: 1,      // Lớp 1 - 5 (mặc định Lớp 1)
+    studentName: 'Siêu Trạng Nhí', // Tên học sinh mặc định
+    customAccountId: '',   // ID tài khoản do người dùng input (nếu có)
     loggedInAccount: null, // Tài khoản Web ID (l1_001...), grade, firstLoginTimestamp, expiryTimestamp
     lockedToGrade: null,   // Khóa cứng khối lớp đã kích hoạt (1 - 5)
+    rememberLogin: true,   // Ghi nhớ đăng nhập
+    parentControl: {
+      email: '',
+      emailPass: ''
+    },
     useCustomAvatar: false, // Bật khi thay đổi phụ kiện / tóc / áo tùy biến
     avatarId: 'chibi_cong_chua_toc_may',
     selectedChibiId: 'chibi_cong_chua_toc_may',
@@ -1346,22 +1355,29 @@
         AppState.isVip2 = !!d.isVip2;
         AppState.vip1ExpiryTimestamp = d.vip1ExpiryTimestamp || 0;
 
+        // Khôi phục Khóa Phụ Huynh & Ghi Nhớ Đăng Nhập
+        AppState.rememberLogin = d.rememberLogin !== false;
+        AppState.parentControl = d.parentControl || { email: '', emailPass: '' };
+
         // Khôi phục tài khoản đã đăng nhập
-        if (d.loggedInAccount) {
+        if (d.loggedInAccount && typeof d.loggedInAccount === 'object' && d.loggedInAccount.id) {
           AppState.loggedInAccount = d.loggedInAccount;
           if (AppState.loggedInAccount.expiryTimestamp && Date.now() > AppState.loggedInAccount.expiryTimestamp) {
             console.warn('Tài khoản Web ID đã hết hạn 1 năm sử dụng!');
             AppState.loggedInAccount = null;
             AppState.lockedToGrade = null;
           } else {
-            AppState.lockedToGrade = d.lockedToGrade || AppState.loggedInAccount.grade;
-            AppState.selectedGrade = AppState.lockedToGrade;
-            AppState.customAccountId = AppState.loggedInAccount.id ? AppState.loggedInAccount.id.toUpperCase() : '';
+            AppState.isVip2 = !!d.loggedInAccount.isVip2 || !!d.isVip2;
+            AppState.lockedToGrade = AppState.isVip2 ? null : (d.lockedToGrade || AppState.loggedInAccount.grade);
+            AppState.selectedGrade = AppState.lockedToGrade || d.selectedGrade || 1;
+            AppState.customAccountId = getLoggedInAccId();
             AppState.studentName = AppState.customAccountId;
             AppState.isVip1 = true;
             AppState.unlockedRounds = Array.from({length: 18}, (_, i) => i + 1);
           }
         } else {
+          AppState.loggedInAccount = null;
+          AppState.lockedToGrade = null;
           AppState.selectedGrade = d.selectedGrade || 1;
         }
 
@@ -1414,6 +1430,8 @@
         customAccountId: AppState.customAccountId || '',
         loggedInAccount: AppState.loggedInAccount || null,
         lockedToGrade: AppState.lockedToGrade || null,
+        rememberLogin: !!AppState.rememberLogin,
+        parentControl: AppState.parentControl || { email: '', emailPass: '' },
         useCustomAvatar: !!AppState.useCustomAvatar,
         avatarId: AppState.avatarId,
         selectedChibiId: AppState.selectedChibiId,
@@ -4819,6 +4837,10 @@
     }
     const modalContainer = document.getElementById('modal-container');
 
+    const defaultEmail = (AppState.parentControl && AppState.parentControl.email) || '';
+    const defaultEmailPass = (AppState.parentControl && AppState.parentControl.emailPass) || '';
+    const defaultId = getLoggedInAccId() || '';
+
     modalContainer.innerHTML = `
       <div class="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
         <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-gradient-to-b from-amber-50 via-white to-orange-50/70 rounded-3xl border-4 border-amber-400 relative shadow-2xl overflow-hidden">
@@ -4826,40 +4848,73 @@
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
-          <div class="text-center mb-4">
-            <div class="relative inline-block mb-2">
-              <div class="w-20 h-20 bg-gradient-to-br from-amber-100 via-white to-amber-200 rounded-full border-4 border-amber-400 flex items-center justify-center mx-auto shadow-md p-1 overflow-hidden bg-white">
+          <div class="text-center mb-3">
+            <div class="relative inline-block mb-1">
+              <div class="w-16 h-16 bg-gradient-to-br from-amber-100 via-white to-amber-200 rounded-full border-4 border-amber-400 flex items-center justify-center mx-auto shadow-md p-1 overflow-hidden bg-white">
                 <img src="app_logo.png" alt="Siêu Trạng Nhí" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
               </div>
-              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-7 h-7 flex items-center justify-center text-xs shadow font-bold">🔑</span>
+              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-6 h-6 flex items-center justify-center text-[10px] shadow font-bold">🔑</span>
             </div>
-            <h3 class="text-lg sm:text-xl font-black text-red-900 uppercase tracking-tight">ĐĂNG NHẬP TÀI KHOẢN HỌC SINH</h3>
-            <p class="text-xs text-slate-600 font-bold mt-1">Học vui • Nhớ lâu • Mở khóa duy nhất 1 khối lớp trong 1 năm</p>
+            <h3 class="text-base sm:text-lg font-black text-red-900 uppercase tracking-tight">ĐĂNG NHẬP TÀI KHOẢN HỌC SINH</h3>
+            <p class="text-[11px] text-slate-600 font-bold mt-0.5">Mở khóa 18 vòng thi • Tự động ghi nhớ lần sau</p>
           </div>
 
-          <form onsubmit="event.preventDefault(); submitLoginForm();" class="space-y-3 mb-4">
+          <form onsubmit="event.preventDefault(); submitModalLoginForm();" class="space-y-2.5 mb-3 text-left">
             <div>
-              <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mã ID Học Sinh:</label>
-              <div class="relative">
-                <input type="text" id="login-id-input" placeholder="Ví dụ: l1_001, l2_005, l3_100..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase">
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">Lớp 1 - 5</span>
-              </div>
+              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Email Phụ Huynh:</label>
+              <input type="email" id="modal-email-input" value="${defaultEmail}" placeholder="Ví dụ: phuhuynh@gmail.com" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
             </div>
 
             <div>
-              <label class="block text-xs font-black text-slate-700 uppercase mb-1">Mật Khẩu:</label>
-              <input type="password" id="login-pass-input" value="kdepass" placeholder="Mật khẩu (kdepass)" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu Email (Khóa Phụ Huynh):</label>
+              <input type="password" id="modal-email-pass-input" value="${defaultEmailPass}" placeholder="Mật khẩu email dùng để thoát thi..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
             </div>
 
-            <button type="submit" class="btn-3d btn-3d-gold w-full py-3 rounded-2xl font-black text-amber-950 text-sm sm:text-base flex items-center justify-center gap-2 shadow-md mt-2">
+            <div>
+              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mã ID Học Sinh:</label>
+              <input type="text" id="modal-id-input" value="${defaultId}" placeholder="Ví dụ: l1_001, l2_005, vip2_001..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu ID:</label>
+              <input type="password" id="modal-id-pass-input" value="kdepass" placeholder="kdepass" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+            </div>
+
+            <div class="flex items-center gap-2 pt-0.5">
+              <input type="checkbox" id="modal-remember-me" class="w-3.5 h-3.5 text-amber-600 rounded border-amber-300 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
+              <label for="modal-remember-me" class="text-[11px] font-bold text-slate-700 cursor-pointer">Ghi nhớ đăng nhập (Lần sau tự động vào học)</label>
+            </div>
+
+            <button type="submit" class="btn-3d btn-3d-gold w-full py-2.5 rounded-xl font-black text-amber-950 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mt-2">
               <span>🚀 Đăng Nhập Ngay</span>
             </button>
           </form>
 
-          <div class="p-3 bg-amber-100/70 rounded-2xl border border-amber-300 text-[11px] sm:text-xs text-amber-950 leading-relaxed font-medium">
-            <div class="font-extrabold text-red-900 mb-1 flex items-center gap-1">
-              <span>💡</span> Cấu trúc Mã ID & Mật khẩu chuẩn:
-            </div>
+          <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[10.5px] text-amber-950 leading-relaxed font-medium">
+            💡 Gói VIP 1: ID <code class="bg-white px-1 rounded text-red-700 font-bold">l1_001</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) ➔ Mở 1 lớp/1 năm. <br>
+            💡 Gói VIP 2: ID <code class="bg-white px-1 rounded text-red-700 font-bold">vip2_001</code> hoặc <code class="bg-white px-1 rounded font-bold">admin</code>, <code class="bg-white px-1 rounded font-bold">apptest</code>, <code class="bg-white px-1 rounded font-bold">uyenlp1310</code> ➔ Mở Trọn Đời 5 Lớp.
+          </div>
+        </div>
+      </div>
+    `;
+    safeCreateIcons();
+  }
+
+  function submitModalLoginForm() {
+    const emailEl = document.getElementById('modal-email-input');
+    const emailPassEl = document.getElementById('modal-email-pass-input');
+    const idEl = document.getElementById('modal-id-input');
+    const idPassEl = document.getElementById('modal-id-pass-input');
+    const rememberEl = document.getElementById('modal-remember-me');
+
+    const email = emailEl ? emailEl.value.trim() : '';
+    const emailPass = emailPassEl ? emailPassEl.value.trim() : '';
+    const id = idEl ? idEl.value.trim() : '';
+    const idPass = idPassEl ? idPassEl.value.trim() : '';
+    const rememberMe = rememberEl ? rememberEl.checked : true;
+
+    processLoginGate(id, idPass, email, emailPass, rememberMe);
+  }
             <ul class="space-y-0.5 list-disc list-inside">
               <li><b>Mã ID:</b> <code class="bg-white px-1 rounded text-red-700 font-bold">l&lt;lớp&gt;_&lt;số&gt;</code> (l1_001 cho Lớp 1, l2_001 cho Lớp 2...)</li>
               <li><b>Số thứ tự:</b> Đánh số từ 00001 tới 99999 cho mỗi khối lớp.</li>
@@ -5890,6 +5945,152 @@
   }
 
   // ==========================================
+  // [MÀN HÌNH ĐĂNG NHẬP CỔNG CÓ KHÓA PHỤ HUYNH & TỰ ĐỘNG GHI NHỚ]
+  // ==========================================
+  function renderLoginGate() {
+    clearExamSessionData();
+    const root = document.getElementById('app-root');
+    if (!root) return;
+
+    // Ẩn Header khi ở màn hình Cổng đăng nhập
+    const appHeader = document.getElementById('main-app-header');
+    if (appHeader) appHeader.style.display = 'none';
+
+    const defaultEmail = (AppState.parentControl && AppState.parentControl.email) || '';
+    const defaultEmailPass = (AppState.parentControl && AppState.parentControl.emailPass) || '';
+    const defaultId = getLoggedInAccId() || '';
+
+    root.innerHTML = `
+      <div class="min-h-[85vh] flex items-center justify-center p-3 sm:p-6 select-none">
+        <div class="scroll-card max-w-lg w-full p-6 sm:p-8 bg-gradient-to-b from-amber-50 via-white to-orange-50 rounded-3xl border-4 border-amber-400 relative shadow-2xl text-center overflow-hidden">
+
+          <!-- Họa tiết trang trí vân mây trống đồng -->
+          <div class="dong-son-pattern absolute inset-0 pointer-events-none opacity-20"></div>
+
+          <div class="relative z-10">
+            <!-- Logo nổi bật -->
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-3">
+              <div class="w-full h-full rounded-full border-4 border-amber-400 bg-gradient-to-br from-amber-100 via-white to-amber-200 p-1 shadow-lg overflow-hidden flex items-center justify-center bg-white transform hover:scale-105 transition-transform">
+                <img src="app_logo.png" alt="Siêu Trạng Nhí" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
+              </div>
+              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-8 h-8 flex items-center justify-center text-sm shadow animate-bounce font-bold">🔑</span>
+            </div>
+
+            <!-- Tiêu đề ứng dụng -->
+            <h1 class="text-2xl sm:text-3xl font-black text-red-900 tracking-tight leading-tight uppercase mb-1">
+              Siêu Trạng Nhí Tiếng Việt
+            </h1>
+            <p class="text-xs sm:text-sm font-extrabold text-emerald-800 mb-5">
+              Nền Tảng Ôn Thi Tiếng Việt Tiểu Học (Lớp 1 - Lớp 5)
+            </p>
+
+            <!-- Form đăng nhập 4 trường -->
+            <form onsubmit="event.preventDefault(); submitLoginGateForm();" class="space-y-3 text-left mb-5">
+
+              <!-- 1. Email Đăng Ký Phụ Huynh -->
+              <div>
+                <label class="block text-xs font-black text-slate-800 uppercase mb-1">
+                  Email Đăng Ký Phụ Huynh:
+                </label>
+                <input type="email" id="gate-email-input" value="${defaultEmail}" placeholder="Ví dụ: phuhuynh@gmail.com..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <!-- 2. Mật Khẩu Email (Khóa Phụ Huynh) -->
+              <div>
+                <label class="block text-xs font-black text-slate-800 uppercase mb-1">
+                  Mật Khẩu Email (Khóa Phụ Huynh Thoát Bài Thi):
+                </label>
+                <input type="password" id="gate-email-pass-input" value="${defaultEmailPass}" placeholder="Nhập mật khẩu email phụ huynh để thoát chế độ thi..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <!-- 3. Mã ID Học Sinh -->
+              <div>
+                <label class="block text-xs font-black text-slate-800 uppercase mb-1">
+                  Mã ID Học Sinh:
+                </label>
+                <div class="relative">
+                  <input type="text" id="gate-id-input" value="${defaultId}" placeholder="Ví dụ: l1_001, l2_005, vip2_001, admin..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-black text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold pointer-events-none">Lớp 1 - 5</span>
+                </div>
+              </div>
+
+              <!-- 4. Mật Khẩu ID -->
+              <div>
+                <label class="block text-xs font-black text-slate-800 uppercase mb-1">
+                  Mật Khẩu ID:
+                </label>
+                <input type="password" id="gate-id-pass-input" value="kdepass" placeholder="kdepass (Tài khoản Admin không cần mật khẩu ID)" class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <!-- 5. Checkbox Ghi nhớ đăng nhập -->
+              <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="gate-remember-me" class="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
+                <label for="gate-remember-me" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                  Ghi nhớ đăng nhập (Lần sau tự động vào học không cần gõ lại)
+                </label>
+              </div>
+
+              <!-- Nút Đăng nhập -->
+              <button type="submit" class="btn-3d btn-3d-gold w-full py-3.5 rounded-2xl font-black text-amber-950 text-base sm:text-lg flex items-center justify-center gap-2 shadow-lg mt-3 transition-transform active:scale-95">
+                <span>🚀 ĐĂNG NHẬP VÀO HỌC</span>
+              </button>
+            </form>
+
+            <!-- Hướng dẫn quy tắc ID -->
+            <div class="p-3 bg-amber-100/80 rounded-2xl border border-amber-300 text-[11px] sm:text-xs text-amber-950 text-left leading-relaxed font-medium shadow-xs space-y-1">
+              <div class="font-extrabold text-red-900 flex items-center gap-1">
+                <span>💡</span> Quy tắc Mã ID & Phân Quyền:
+              </div>
+              <div>• <b>VIP 1 (1 Khối Lớp - 1 Năm):</b> Nhập ID <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">l1_001</code> đến <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">l5_99999</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) ➔ Mở 18 vòng thi của 1 khối lớp trong 1 năm.</div>
+              <div>• <b>VIP 2 Trọn Đời (5 Khối Lớp):</b> Nhập ID <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">vip2_001</code> đến <code class="bg-white px-1 rounded text-red-700 font-bold border border-amber-300">vip2_99999</code> (Mật khẩu ID: <code class="bg-white px-1 rounded font-bold">kdepass</code>) hoặc <code class="bg-white px-1 rounded font-bold">admin</code>, <code class="bg-white px-1 rounded font-bold">apptest</code>, <code class="bg-white px-1 rounded font-bold">uyenlp1310</code> (Không cần mật khẩu ID) ➔ Mở TRỌN ĐỜI cả 5 khối Lớp.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+    safeCreateIcons();
+  }
+
+  function submitLoginGateForm() {
+    const emailEl = document.getElementById('gate-email-input');
+    const emailPassEl = document.getElementById('gate-email-pass-input');
+    const idEl = document.getElementById('gate-id-input');
+    const idPassEl = document.getElementById('gate-id-pass-input');
+    const rememberEl = document.getElementById('gate-remember-me');
+
+    const email = emailEl ? emailEl.value.trim() : '';
+    const emailPass = emailPassEl ? emailPassEl.value.trim() : '';
+    const id = idEl ? idEl.value.trim() : '';
+    const idPass = idPassEl ? idPassEl.value.trim() : '';
+    const rememberMe = rememberEl ? rememberEl.checked : true;
+
+    processLoginGate(id, idPass, email, emailPass, rememberMe);
+  }
+
+  function processLoginGate(idInput, idPassInput, emailInput, emailPassInput, rememberMe) {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
+
+    if (!emailInput) {
+      showCustomAlert('Vui lòng nhập Email Đăng Ký Phụ Huynh!', 'Lỗi Đăng Nhập');
+      return false;
+    }
+
+    if (!emailPassInput) {
+      showCustomAlert('Vui lòng nhập Mật Khẩu Email Phụ Huynh! (Mật khẩu này dùng để mở khóa khi thoát bài thi toàn màn hình)', 'Lỗi Đăng Nhập');
+      return false;
+    }
+
+    AppState.parentControl = {
+      email: emailInput,
+      emailPass: emailPassInput
+    };
+    AppState.rememberLogin = !!rememberMe;
+
+    return processLogin(idInput, idPassInput);
+  }
+
+  // ==========================================
   // [MÀN HÌNH CHÍNH & CHỌN VÒNG THI]
   // ==========================================
   function renderHome() {
@@ -6860,6 +7061,7 @@
   // ĐIỀU PHỐI VÀO BÀI THI: XỬ LÝ BẤT ĐỒNG BỘ 3 TẦNG ƯU TIÊN
   // ========================================================
   async function startRoundExam(roundNum, chosenSeed = null) {
+    enterFullscreen();
     clearExamSessionData();
     const maxSeeds = getMaxSeeds(roundNum);
 
@@ -7041,30 +7243,109 @@
     el.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  function confirmExitExam() {
-    showCustomConfirm(
-      'Bạn muốn thoát bài thi?',
-      function() {
-        if (AppState.timerInterval) {
-          clearInterval(AppState.timerInterval);
-          AppState.timerInterval = null;
-        }
-        if (AppState.singlePlayTickets && AppState.singlePlayTickets[AppState.currentRoundNum]) {
-          delete AppState.singlePlayTickets[AppState.currentRoundNum];
-          savePersistedState();
-        }
-        AppState.currentExamMode1 = null;
-        AppState.exam30Questions = [];
-        AppState.game1MatchedPairs = [];
-        const appHeader = document.getElementById('main-app-header');
+  function enterFullscreen() {
+    try {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    } catch (_) {}
+  }
 
-        if (appHeader) appHeader.style.display = 'block';
-        closeModal();
-        renderHome();
-      },
-      null,
-      'Xác Nhận'
-    );
+  function exitFullscreen() {
+    try {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
+    } catch (_) {}
+  }
+
+  function openParentalExitModal() {
+    if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) SoundEngine.playClick();
+
+    const modalContainer = document.getElementById('modal-container');
+    const parentEmail = (AppState.parentControl && AppState.parentControl.email) ? AppState.parentControl.email : 'Phụ Huynh';
+
+    modalContainer.innerHTML = `
+      <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+        <div class="scroll-card max-w-md w-full p-6 bg-gradient-to-b from-amber-50 via-white to-red-50 rounded-3xl border-4 border-red-500 relative shadow-2xl text-center overflow-hidden">
+          <button onclick="closeModal()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+
+          <div class="w-16 h-16 bg-red-100 border-2 border-red-400 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl shadow-inner animate-pulse">
+            🔒
+          </div>
+
+          <h3 class="text-lg sm:text-xl font-black text-red-900 uppercase mb-1">KHÓA PHỤ HUYNH KHỎI BÀI THI</h3>
+          <p class="text-xs text-slate-600 font-bold mb-4 leading-relaxed">
+            Bài thi đang diễn ra toàn màn hình. Phụ huynh vui lòng nhập Mật Khẩu Email để mở khóa cho bé thoát bài thi.
+          </p>
+
+          <form onsubmit="event.preventDefault(); verifyParentalExitPass();" class="space-y-3.5 text-left mb-4">
+            <div>
+              <label class="block text-xs font-black text-slate-700 uppercase mb-1">
+                Email Phụ Huynh: <span class="text-red-700 font-bold">${parentEmail}</span>
+              </label>
+              <input type="password" id="parental-exit-pass-input" placeholder="Nhập Mật Khẩu Email Phụ Huynh..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-red-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-red-500 bg-white shadow-inner">
+            </div>
+
+            <button type="submit" class="btn-3d btn-3d-red w-full py-3 rounded-xl font-black text-white text-sm sm:text-base shadow-md flex items-center justify-center gap-2">
+              <span>🔓 MỞ KHÓA THOÁT BÀI THI</span>
+            </button>
+          </form>
+
+          <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[11px] text-amber-950 font-medium">
+            💡 Mật khẩu mở khóa thoát bài thi là <b>Mật khẩu Email Phụ Huynh</b> đã cài đặt lúc đăng nhập.
+          </div>
+        </div>
+      </div>
+    `;
+    safeCreateIcons();
+  }
+
+  function verifyParentalExitPass() {
+    const passInput = document.getElementById('parental-exit-pass-input');
+    const enteredPass = passInput ? passInput.value.trim() : '';
+    const expectedPass = (AppState.parentControl && AppState.parentControl.emailPass) ? AppState.parentControl.emailPass.trim() : '';
+
+    if (isAdminAccount() || (expectedPass && enteredPass === expectedPass) || (!expectedPass && enteredPass === 'kdepass')) {
+      closeModal();
+      exitFullscreen();
+      executeExitExam();
+    } else {
+      showCustomAlert('❌ Mật khẩu Email Phụ Huynh không chính xác! Vui lòng nhập đúng mật khẩu email đã đăng ký.', 'Khóa Phụ Huynh');
+    }
+  }
+
+  function executeExitExam() {
+    if (AppState.timerInterval) {
+      clearInterval(AppState.timerInterval);
+      AppState.timerInterval = null;
+    }
+    if (AppState.singlePlayTickets && AppState.singlePlayTickets[AppState.currentRoundNum]) {
+      delete AppState.singlePlayTickets[AppState.currentRoundNum];
+      savePersistedState();
+    }
+    AppState.currentExamMode1 = null;
+    AppState.exam30Questions = [];
+    AppState.game1MatchedPairs = [];
+    const appHeader = document.getElementById('main-app-header');
+
+    if (appHeader) appHeader.style.display = 'block';
+    renderHome();
+  }
+
+  function confirmExitExam() {
+    openParentalExitModal();
   }
 
   // ========================================================
@@ -10307,11 +10588,11 @@
   // Khởi động
   window.addEventListener('DOMContentLoaded', () => {
     loadPersistedState();
-    renderHome();
-    // Tự động chuyển vào màn hình chính sau 2.2 giây nếu học sinh không chạm vào màn hình
-    setTimeout(() => {
-      dismissSplashScreen();
-    }, 2200);
+    if ((AppState.loggedInAccount && AppState.rememberLogin) || isAdminAccount()) {
+      renderHome();
+    } else {
+      renderLoginGate();
+    }
   });
   </script>
 </body>
