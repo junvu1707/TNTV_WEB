@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Siêu Trạng Nhí Tiếng Việt</title>
-  <!-- Tailwind CSS & Lucide Icons (CDN + Local Fallback) -->
+  <!-- Tailwind CSS & Lucide Icons & EmailJS (CDN + Local Fallback) -->
   <script src="https://cdn.tailwindcss.com" onerror="this.onerror=null; this.src='tailwindcss.js';"></script>
   <script src="https://unpkg.com/lucide@latest" onerror="this.onerror=null; this.src='lucide.min.js';"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -5100,6 +5101,38 @@
     }
   }
 
+  // Cấu hình EmailJS
+  const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
+  const EMAILJS_SERVICE_ID = 'service_junvu';
+  const EMAILJS_TEMPLATE_ID = 'template_tntv';
+
+  async function sendViaEmailJS(templateParams) {
+    if (window.emailjs && typeof window.emailjs.send === 'function') {
+      try {
+        await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+        return true;
+      } catch (e) {
+        console.warn('EmailJS SDK error:', e);
+      }
+    }
+    try {
+      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: EMAILJS_SERVICE_ID,
+          template_id: EMAILJS_TEMPLATE_ID,
+          user_id: EMAILJS_PUBLIC_KEY,
+          template_params: templateParams
+        })
+      });
+      return true;
+    } catch (e) {
+      console.warn('EmailJS REST error:', e);
+      return false;
+    }
+  }
+
   async function submitVipRegistration() {
     const emailEl = document.getElementById('reg-email');
     const phoneEl = document.getElementById('reg-phone');
@@ -5126,51 +5159,39 @@
       submitBtn.innerText = '⏳ Đang gửi yêu cầu...';
     }
 
-    const autoResponseMsg = `Kính gửi Phụ huynh,\n\nCảm ơn bạn đã đăng ký gói học tập ${pkg} trên Siêu Trạng Nhí Tiếng Việt!\n\n🏦 THÔNG TIN CHUYỂN KHOẢN THANH TOÁN:\n• Ngân hàng: VPBank\n• Số tài khoản: 0972170786\n• Chủ tài khoản: NGUYEN THI LAN\n• Nội dung chuyển khoản: TNTV ${phone}\n\n📲 HƯỚNG DẪN KÍCH HOẠT:\nSau khi chuyển khoản, phụ huynh gửi ảnh chụp màn hình Bill qua Zalo SĐT 0972.170.786 hoặc phản hồi lại Email này, Admin sẽ gửi Mã VIP kích hoạt ngay trong 3 phút!\n\nTrân trọng,\nBan Quản Trị Siêu Trạng Nhí Tiếng Việt`;
+    const templateParams = {
+      to_email: 'junvu.dev@gmail.com',
+      parent_email: email,
+      phone: phone,
+      grade: `Lớp ${grade}`,
+      vip_package: pkg,
+      bank_info: 'VPBank - STK 0972170786 - NGUYEN THI LAN',
+      timestamp: new Date().toLocaleString('vi-VN')
+    };
 
     try {
+      await sendViaEmailJS(templateParams);
       await fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP: ${pkg} - SĐT ${phone}`,
           _captcha: 'false',
           _template: 'table',
-          _autoresponse: autoResponseMsg,
           Email_Phu_Huynh: email,
           So_Dien_Thoai_Zalo: phone,
           Khoi_Lop: `Lớp ${grade}`,
           Goi_VIP_Dang_Ky: pkg,
-          Thong_Tin_Chuyen_Khoan: 'VPBank - 0972170786 - NGUYEN THI LAN',
           Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
         })
       });
+    } catch (e) {}
 
-      closeModal();
-      showCustomAlert(
-        `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
-        `• Email: ${email}\n` +
-        `• SĐT Zalo: ${phone}\n` +
-        `• Gói VIP: ${pkg}\n\n` +
-        `📩 Email chứa THÔNG TIN CHUYỂN KHOẢN (VPBank - 0972170786 - NGUYEN THI LAN) đã được gửi tự động tới hòm thư ${email}.\n\n` +
-        `Đội ngũ Admin sẽ liên hệ qua Zalo/SĐT ${phone} để gửi Mã VIP cho bạn ngay!`,
-        'Đăng Ký VIP Thành Công'
-      );
-    } catch (e) {
-      closeModal();
-      showCustomAlert(
-        `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
-        `• Email: ${email}\n` +
-        `• SĐT Zalo: ${phone}\n` +
-        `• Gói VIP: ${pkg}\n\n` +
-        `📩 Thông tin thanh toán (VPBank - 0972170786 - NGUYEN THI LAN) đã được lưu.\n\n` +
-        `Đội ngũ Admin sẽ liên hệ qua Zalo/SĐT ${phone} để gửi Mã VIP cho bạn ngay!`,
-        'Đăng Ký VIP Thành Công'
-      );
-    }
+    closeModal();
+    showCustomAlert(
+      `🎉 Đã gửi yêu cầu thành công. Đội ngũ admin sẽ liên hệ lại cho bạn ngay!`,
+      'Đăng Ký VIP Thành Công'
+    );
   }
 
   function submitModalLoginForm() {
