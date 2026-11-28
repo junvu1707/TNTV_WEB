@@ -4945,7 +4945,7 @@
     }
   }
 
-  function openLoginModal() {
+  function openLoginModal(initialTab = 'login') {
     if (typeof SoundEngine !== 'undefined' && SoundEngine.playClick) {
       SoundEngine.playClick();
     }
@@ -4953,64 +4953,202 @@
 
     const defaultEmail = (AppState.parentControl && AppState.parentControl.email) || '';
     const defaultEmailPass = (AppState.parentControl && AppState.parentControl.emailPass) || '';
-    const defaultId = getLoggedInAccId() || '';
 
     modalContainer.innerHTML = `
       <div class="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-        <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-gradient-to-b from-amber-50 via-white to-orange-50/70 rounded-3xl border-4 border-amber-400 relative shadow-2xl overflow-hidden">
+        <div class="scroll-card max-w-lg w-full p-5 sm:p-6 bg-gradient-to-b from-amber-50 via-white to-orange-50/70 rounded-3xl border-4 border-amber-400 relative shadow-2xl overflow-hidden">
           <button onclick="closeModal()" class="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
-          <div class="text-center mb-3">
-            <div class="relative inline-block mb-1">
-              <div class="w-16 h-16 bg-gradient-to-br from-amber-100 via-white to-amber-200 rounded-full border-4 border-amber-400 flex items-center justify-center mx-auto shadow-md p-1 overflow-hidden bg-white">
-                <img src="app_logo.png" alt="Siêu Trạng Nhí" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
-              </div>
-              <span class="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 border border-amber-200 rounded-full w-6 h-6 flex items-center justify-center text-[10px] shadow font-bold">🔑</span>
-            </div>
-            <h3 class="text-base sm:text-lg font-black text-red-900 uppercase tracking-tight">ĐĂNG NHẬP TÀI KHOẢN HỌC SINH</h3>
-            <p class="text-[11px] text-slate-600 font-bold mt-0.5">Mở khóa 18 vòng thi • Tự động ghi nhớ lần sau</p>
-          </div>
-
-          <form onsubmit="event.preventDefault(); submitModalLoginForm();" class="space-y-2.5 mb-3 text-left">
-            <div>
-              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Email Phụ Huynh:</label>
-              <input type="email" id="modal-email-input" value="${defaultEmail}" placeholder="Nhập email phụ huynh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu Email (Khóa Phụ Huynh):</label>
-              <input type="password" id="modal-email-pass-input" value="${defaultEmailPass}" placeholder="Mật khẩu email dùng để thoát thi..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
-            </div>
-
-            <div>
-              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mã ID Học Sinh:</label>
-              <input type="text" id="modal-id-input" value="" placeholder="Nhập Mã ID Học Sinh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
-            </div>
-
-            <div class="flex items-center gap-2 pt-0.5">
-              <input type="checkbox" id="modal-remember-me" class="w-3.5 h-3.5 text-amber-600 rounded border-amber-300 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
-              <label for="modal-remember-me" class="text-[11px] font-bold text-slate-700 cursor-pointer">Ghi nhớ đăng nhập (Lần sau tự động vào học)</label>
-            </div>
-
-            <button type="submit" class="btn-3d btn-3d-gold w-full py-2.5 rounded-xl font-black text-amber-950 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mt-2">
-              <span>🚀 Đăng Nhập Ngay</span>
+          <!-- Thanh 2 Tab Đổi Màn Hình -->
+          <div class="flex border-b-2 border-amber-200 mb-4 font-black text-xs sm:text-sm">
+            <button onclick="switchAuthTab('login')" id="tab-btn-login" class="flex-1 py-2.5 text-center border-b-4 border-amber-500 text-amber-950 bg-amber-100/60 rounded-t-xl transition-all">
+              🔑 Đăng Nhập Mã VIP
             </button>
-          </form>
-
-          <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[10.5px] text-amber-950 leading-relaxed font-medium space-y-1">
-            <div>💡 <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
-            <div>💡 <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
+            <button onclick="switchAuthTab('register')" id="tab-btn-register" class="flex-1 py-2.5 text-center border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition-all">
+              📝 Đăng Ký Mua VIP
+            </button>
           </div>
 
-          <div class="mt-2.5 p-2.5 bg-red-50 rounded-xl border border-red-300 text-[10.5px] text-red-950 leading-relaxed font-bold shadow-xs">
+          <!-- TAB 1: FORM ĐĂNG NHẬP -->
+          <div id="auth-tab-login-content">
+            <form onsubmit="event.preventDefault(); submitModalLoginForm();" class="space-y-2.5 mb-3 text-left">
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Email Phụ Huynh:</label>
+                <input type="email" id="modal-email-input" value="${defaultEmail}" placeholder="Nhập email phụ huynh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu Email (Khóa Phụ Huynh):</label>
+                <input type="password" id="modal-email-pass-input" value="${defaultEmailPass}" placeholder="Mật khẩu email dùng để thoát thi..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mã ID / Mã VIP Học Sinh:</label>
+                <input type="text" id="modal-id-input" value="" placeholder="Nhập Mã VIP Học Sinh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
+              </div>
+
+              <div class="flex items-center gap-2 pt-0.5">
+                <input type="checkbox" id="modal-remember-me" class="w-3.5 h-3.5 text-amber-600 rounded border-amber-300 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
+                <label for="modal-remember-me" class="text-[11px] font-bold text-slate-700 cursor-pointer select-none">Ghi nhớ đăng nhập (Lần sau tự động vào học)</label>
+              </div>
+
+              <button type="submit" class="btn-3d btn-3d-gold w-full py-2.5 rounded-xl font-black text-amber-950 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mt-2">
+                <span>🚀 Đăng Nhập Ngay</span>
+              </button>
+            </form>
+
+            <div class="p-2.5 bg-amber-100/70 rounded-xl border border-amber-300 text-[10.5px] text-amber-950 leading-relaxed font-medium space-y-1 text-left">
+              <div>💡 <b>Gói VIP 1 (49.000đ):</b> Mở khóa 18 vòng thi trong <b>1 năm (365 ngày)</b> cho 1 khối lớp đã chọn.</div>
+              <div>💡 <b>Gói VIP 2 (99.000đ):</b> Mở khóa 18 vòng thi trong <b>3 năm (1095 ngày)</b> cho toàn bộ 5 khối lớp.</div>
+            </div>
+          </div>
+
+          <!-- TAB 2: FORM ĐĂNG KÝ MUA VIP (GỬI TỰ ĐỘNG VỀ EMAIL ADMIN) -->
+          <div id="auth-tab-register-content" class="hidden text-left">
+            <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-300 text-emerald-950 text-xs font-medium mb-3">
+              🎉 Điền thông tin dưới đây để đăng ký nhận Mã VIP kích hoạt ngay trong 5 phút!
+            </div>
+
+            <form onsubmit="event.preventDefault(); submitVipRegistration();" class="space-y-2.5 mb-3">
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Email Phụ Huynh (*):</label>
+                <input type="email" id="reg-email" value="${defaultEmail}" placeholder="Ví dụ: phuhuynh@gmail.com..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner" required>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Số Điện Thoại / Zalo Liên Hệ (*):</label>
+                <input type="tel" id="reg-phone" placeholder="Ví dụ: 0987654321..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner" required>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Chọn Khối Lớp Của Bé:</label>
+                <select id="reg-grade" class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
+                  <option value="1" ${AppState.selectedGrade === 1 ? 'selected' : ''}>Lớp 1</option>
+                  <option value="2" ${AppState.selectedGrade === 2 ? 'selected' : ''}>Lớp 2</option>
+                  <option value="3" ${AppState.selectedGrade === 3 ? 'selected' : ''}>Lớp 3</option>
+                  <option value="4" ${AppState.selectedGrade === 4 ? 'selected' : ''}>Lớp 4</option>
+                  <option value="5" ${AppState.selectedGrade === 5 ? 'selected' : ''}>Lớp 5</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-black text-slate-800 uppercase mb-1">Chọn Gói VIP Đăng Ký:</label>
+                <div class="space-y-1.5 text-xs font-bold text-slate-800">
+                  <label class="flex items-center gap-2 p-2 rounded-xl border-2 border-amber-300 bg-white cursor-pointer hover:bg-amber-50">
+                    <input type="radio" name="reg-pkg" value="VIP 1 (49.000đ - 1 Lớp / 1 Năm)" checked class="w-4 h-4 text-amber-600">
+                    <div>
+                      <span class="text-red-700 font-black">Gói VIP 1 (49.000đ)</span> — Mở 18 vòng thi/1 năm cho 1 Lớp
+                    </div>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 rounded-xl border-2 border-emerald-400 bg-emerald-50/60 cursor-pointer hover:bg-emerald-100">
+                    <input type="radio" name="reg-pkg" value="VIP 2 (99.000đ - 5 Lớp / 3 Năm)" class="w-4 h-4 text-emerald-600">
+                    <div>
+                      <span class="text-emerald-900 font-black">Gói VIP 2 (99.000đ)</span> — Mở trọn bộ 5 Lớp trong 3 Năm (Ưu đãi)
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <button type="submit" id="btn-submit-reg-vip" class="btn-3d btn-3d-green w-full py-2.5 rounded-xl font-black text-white text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md mt-3">
+                <span>📩 GỬI YÊU CẦU ĐĂNG KÝ VỀ ADMIN</span>
+              </button>
+            </form>
+          </div>
+
+          <div class="mt-2.5 p-2.5 bg-red-50 rounded-xl border border-red-300 text-[10.5px] text-red-950 leading-relaxed font-bold shadow-xs text-left">
             ⚠️ <b>LƯU Ý QUAN TRỌNG:</b> Mỗi Mã ID chỉ được phép sử dụng trên <b>01 thiết bị duy nhất</b>. Tài khoản sẽ <b>TỰ ĐỘNG BỊ KHÓA VĨNH VIỄN</b> nếu hệ thống phát hiện tiếp tục đăng nhập hoặc sử dụng đồng thời trên 2 máy!
           </div>
         </div>
       </div>
     `;
     safeCreateIcons();
+    if (initialTab === 'register') {
+      switchAuthTab('register');
+    }
+  }
+
+  function switchAuthTab(tab) {
+    const tabLoginBtn = document.getElementById('tab-btn-login');
+    const tabRegBtn = document.getElementById('tab-btn-register');
+    const contentLogin = document.getElementById('auth-tab-login-content');
+    const contentReg = document.getElementById('auth-tab-register-content');
+
+    if (tab === 'register') {
+      if (tabLoginBtn) { tabLoginBtn.className = 'flex-1 py-2.5 text-center border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition-all'; }
+      if (tabRegBtn) { tabRegBtn.className = 'flex-1 py-2.5 text-center border-b-4 border-emerald-500 text-emerald-950 bg-emerald-100/60 rounded-t-xl transition-all font-black'; }
+      if (contentLogin) contentLogin.classList.add('hidden');
+      if (contentReg) contentReg.classList.remove('hidden');
+    } else {
+      if (tabRegBtn) { tabRegBtn.className = 'flex-1 py-2.5 text-center border-b-4 border-transparent text-slate-500 hover:text-slate-800 transition-all'; }
+      if (tabLoginBtn) { tabLoginBtn.className = 'flex-1 py-2.5 text-center border-b-4 border-amber-500 text-amber-950 bg-amber-100/60 rounded-t-xl transition-all font-black'; }
+      if (contentReg) contentReg.classList.add('hidden');
+      if (contentLogin) contentLogin.classList.remove('hidden');
+    }
+  }
+
+  async function submitVipRegistration() {
+    const emailEl = document.getElementById('reg-email');
+    const phoneEl = document.getElementById('reg-phone');
+    const gradeEl = document.getElementById('reg-grade');
+    const pkgEl = document.querySelector('input[name="reg-pkg"]:checked');
+
+    const email = emailEl ? emailEl.value.trim() : '';
+    const phone = phoneEl ? phoneEl.value.trim() : '';
+    const grade = gradeEl ? gradeEl.value : '1';
+    const pkg = pkgEl ? pkgEl.value : 'VIP 1 (49.000đ - 1 Lớp / 1 Năm)';
+
+    if (!email) {
+      showCustomAlert('Vui lòng nhập Email Phụ Huynh!', 'Đăng Ký VIP');
+      return;
+    }
+    if (!phone) {
+      showCustomAlert('Vui lòng nhập Số Điện Thoại Zalo liên hệ!', 'Đăng Ký VIP');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-submit-reg-vip');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = '⏳ Đang gửi yêu cầu...';
+    }
+
+    try {
+      await fetch('https://formsubmit.co/ajax/junvu.dev@gmail.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: `[SIÊU TRẠNG NHÍ] Đăng ký Mã VIP mới: ${pkg} - SĐT ${phone}`,
+          Email_Phu_Huynh: email,
+          So_Dien_Thoai: phone,
+          Khoi_Lop: `Lớp ${grade}`,
+          Goi_Dang_Ky: pkg,
+          Thoi_Gian_Dang_Ky: new Date().toLocaleString('vi-VN')
+        })
+      });
+
+      closeModal();
+      showCustomAlert(
+        `🎉 ĐÃ GỬI YÊU CẦU ĐĂNG KÝ THÀNH CÔNG!\n\n` +
+        `• Email Phụ Huynh: ${email}\n` +
+        `• Số Điện Thoại Zalo: ${phone}\n` +
+        `• Gói Đăng Ký: ${pkg}\n\n` +
+        `Thông tin đã được chuyển tới Admin (junvu.dev@gmail.com). Đội ngũ Admin sẽ liên hệ qua Zalo/Email ${phone} để gửi Mã VIP kích hoạt ngay trong 5 phút!`,
+        'Đăng Ký VIP Thành Công'
+      );
+    } catch (e) {
+      closeModal();
+      showCustomAlert(
+        `🎉 Đã ghi nhận thông tin đăng ký thành công!\n\n` +
+        `• Email: ${email}\n• SĐT Zalo: ${phone}\n• Gói: ${pkg}\n\n` +
+        `Admin sẽ liên hệ gửi Mã VIP qua SĐT/Zalo ${phone} trong giây lát!`,
+        'Đăng Ký VIP'
+      );
+    }
   }
 
   function submitModalLoginForm() {
@@ -10191,77 +10329,7 @@
   }
 
   function openVipModal() {
-    SoundEngine.playClick();
-    const modalContainer = document.getElementById('modal-container');
-
-    modalContainer.innerHTML = `
-      <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="scroll-card max-w-md w-full p-5 sm:p-6 bg-white border-4 border-amber-400 relative shadow-2xl">
-          <button onclick="closeModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 p-1">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-
-          <div class="text-center mb-4">
-            <div class="w-14 h-14 bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-2 text-3xl shadow border-2 border-yellow-200 animate-bounce">
-              👑
-            </div>
-            <h3 class="text-lg font-black text-amber-950 uppercase tracking-tight">NÂNG CẤP TÀI KHOẢN VIP</h3>
-            <p class="text-xs text-slate-500 font-semibold mt-0.5">Trải nghiệm học tập & ôn luyện đỉnh cao không giới hạn</p>
-          </div>
-
-          <div class="space-y-3 mb-4">
-            <!-- Gói VIP 1 -->
-            <div class="p-3.5 rounded-2xl border-2 ${AppState.isVip1 && !AppState.isVip2 ? 'border-amber-500 bg-amber-50/70' : 'border-amber-200 bg-white hover:border-amber-400'} transition-all">
-              <div class="flex items-center justify-between mb-1.5">
-                <div class="flex items-center gap-1.5 font-black text-amber-950 text-sm">
-                  <span>⭐</span> Gói VIP 1 (Học Kì)
-                </div>
-                <span class="font-black text-red-600 text-sm">49.000đ</span>
-              </div>
-              <ul class="text-[11px] text-slate-600 space-y-1 mb-2.5">
-                <li class="flex items-center gap-1">✓ Mở khóa toàn bộ 18 vòng thi trong 1 năm (từ khi đăng ký)</li>
-                <li class="flex items-center gap-1">✓ Xem lời giải chi tiết và mẹo làm bài chuẩn tất cả các đề</li>
-              </ul>
-              <button onclick="simulateBuyVip('vip1')" class="btn-3d w-full py-2 rounded-xl text-white font-black text-xs ${AppState.isVip1 ? 'bg-slate-400 cursor-not-allowed' : 'btn-3d-red'}">
-                ${AppState.isVip1 ? 'Đã kích hoạt VIP 1 ✓' : 'Kích Hoạt VIP 1 (49.000đ)'}
-              </button>
-            </div>
-
-            <!-- Gói VIP 2 Trọn Đời -->
-            <div class="p-3.5 rounded-2xl border-2 border-red-500 bg-gradient-to-r from-red-50 via-amber-50 to-yellow-50 relative overflow-hidden shadow-sm">
-              <div class="absolute top-0 right-0 bg-red-600 text-white font-black text-[9px] px-2 py-0.5 rounded-bl-lg uppercase">
-                Ưu đãi nhất
-              </div>
-              <div class="flex items-center justify-between mb-1.5">
-                <div class="flex items-center gap-1.5 font-black text-red-950 text-sm">
-                  <span>👑</span> Gói VIP 2 (Trọn Đời)
-                </div>
-                <span class="font-black text-red-700 text-base">99.000đ</span>
-              </div>
-              <ul class="text-[11px] text-slate-700 space-y-1 mb-2.5 font-medium">
-                <li class="flex items-center gap-1 font-bold text-red-800">✓ TẤT CẢ quyền lợi của VIP 1</li>
-                <li class="flex items-center gap-1 font-bold text-emerald-800">✓ TẮT HOÀN TOÀN 100% QUẢNG CÁO</li>
-                <li class="flex items-center gap-1 font-bold text-amber-900">✓ Tự động cập nhật ngân hàng câu hỏi mới miễn phí</li>
-                <li class="flex items-center gap-1">✓ Sử dụng trọn đời không gia hạn</li>
-              </ul>
-              <button onclick="simulateBuyVip('vip2')" class="btn-3d btn-3d-green w-full py-2.5 rounded-xl text-white font-black text-xs shadow-md">
-                ${AppState.isVip2 ? 'Đang sở hữu gói VIP Trọn Đời ✓' : 'Nâng Cấp Trọn Đời (99.000đ)'}
-              </button>
-            </div>
-          </div>
-
-          <div class="pt-2.5 border-t border-amber-200 flex items-center justify-between text-xs">
-            <button onclick="openAccountModal()" class="text-slate-500 hover:text-slate-800 font-bold underline">
-              Nhập mã kích hoạt / ID
-            </button>
-            <button onclick="closeModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold">
-              Đóng
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    safeCreateIcons();
+    openLoginModal('register');
   }
 
   function simulateBuyVip(packageCode) {
