@@ -227,50 +227,51 @@
   </div>
 
   <!-- ======================================================== -->
-  <!-- HEADER & THANH TRẠNG THÁI TRẠNG NGUYÊN NHÍ -->
+  <!-- HEADER & THANH TRẠNG THÁI TRẠNG NGUYÊN NHÍ (Thanh To gấp 1.5 lần, Avatar Chibi To gấp 2 lần) -->
   <!-- ======================================================== -->
-  <header id="main-app-header" class="sticky top-0 z-40 bg-gradient-to-r from-[#81C784] via-[#4CAF50] to-[#388E3C] text-white shadow-md border-b-4 border-[#2E7D32] px-3 py-2.5">
-    <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
-      <!-- Học sinh & Chibi Avatar -->
-      <div class="flex items-center gap-2 cursor-pointer" onclick="openAvatarModal()" title="Bấm để vào Tủ Đồ Chibi & Đổi quà bằng Sao">
-        <div id="header-avatar-container" class="relative w-10 h-10 bg-gradient-to-br from-amber-200 to-amber-400 rounded-full border-2 border-yellow-300 flex items-center justify-center shadow-inner overflow-hidden transform hover:scale-110 active:scale-95 transition-transform">
+  <header id="main-app-header" class="sticky top-0 z-40 bg-gradient-to-r from-[#81C784] via-[#4CAF50] to-[#388E3C] text-white shadow-lg border-b-4 border-[#2E7D32] px-3.5 sm:px-5 py-3.5 sm:py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between gap-3">
+      <!-- Học sinh & Chibi Avatar (Avatar to gấp 2 lần: w-20 h-20 / w-22 h-22) -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="openAvatarModal()" title="Bấm để vào Tủ Đồ Chibi & Đổi quà bằng Sao">
+        <div id="header-avatar-container" class="relative w-20 h-20 sm:w-22 sm:h-22 bg-gradient-to-br from-amber-200 to-amber-400 rounded-full border-3 border-yellow-300 flex items-center justify-center shadow-md overflow-hidden transform hover:scale-105 active:scale-95 transition-transform shrink-0">
           <div id="header-avatar-display" class="w-full h-full flex items-center justify-center"></div>
-          <span class="absolute -bottom-0.5 -right-0.5 text-[9px] bg-red-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center border border-white font-bold leading-none">✎</span>
+          <span class="absolute -bottom-1 -right-1 text-[11px] bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center border-2 border-white font-bold leading-none shadow">✎</span>
         </div>
         <div>
-          <div class="flex items-center gap-1.5" onclick="event.stopPropagation(); editStudentName();">
-            <span id="student-name-display" class="font-bold text-sm sm:text-base leading-tight">Siêu Trạng Nhí</span>
-            <i data-lucide="pencil" class="w-3.5 h-3.5 opacity-80"></i>
+          <div class="flex items-center gap-2" onclick="event.stopPropagation(); editStudentName();">
+            <span id="student-name-display" class="font-extrabold text-base sm:text-2xl leading-tight tracking-tight">Siêu Trạng Nhí</span>
+            <i data-lucide="pencil" class="w-4 h-4 sm:w-5 sm:h-5 opacity-90"></i>
           </div>
-          <div class="flex items-center gap-1.5 mt-0.5">
-            <span id="header-grade-badge" class="bg-red-900/70 text-yellow-300 text-xs px-2 py-0.5 rounded-full font-bold border border-yellow-400/40">Lớp 4</span>
-            <span id="header-vip-status" class="bg-emerald-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold">Tài khoản Thường</span>
-            <button onclick="event.stopPropagation(); openAvatarModal();" class="bg-amber-400 hover:bg-amber-500 text-amber-950 text-[11px] px-2.5 py-0.5 rounded-full font-black border border-yellow-100 shadow-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer ml-0.5" title="Bấm để mở Tủ Đồ Chibi">
+          <div class="flex flex-wrap items-center gap-2 mt-1">
+            <span id="header-grade-badge" class="bg-red-900/80 text-yellow-300 text-xs sm:text-sm px-3 py-1 rounded-full font-black border border-yellow-400/50 shadow-xs">Lớp 4</span>
+            <span id="header-vip-status" class="bg-emerald-700 text-white text-xs sm:text-sm px-3 py-1 rounded-full font-bold shadow-xs">Tài khoản Thường</span>
+            <button onclick="event.stopPropagation(); openAvatarModal();" class="bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs sm:text-sm px-3.5 py-1 rounded-full font-black border border-yellow-100 shadow-sm flex items-center gap-1 transition-transform active:scale-95 cursor-pointer" title="Bấm để mở Tủ Đồ Chibi">
               <span>🎭 Tủ đồ</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Đăng Nhập, Nâng Cấp VIP, Xu/Sao & Nút Âm Thanh -->
-      <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Đăng Nhập, Nâng Cấp VIP, Xu/Sao & Nút Âm Thanh (Các nút to gấp 1.5 lần) -->
+      <div class="flex items-center gap-2 sm:gap-3">
         <!-- Nút Đăng Nhập / Đăng Xuất Web -->
         <div id="btn-header-auth"></div>
 
-        <!-- Nút Nâng Cấp VIP ở gần số sao -->
-        <button onclick="openVipModal()" id="btn-header-vip-upgrade" class="btn-3d flex items-center gap-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 px-2.5 sm:px-3 py-1 rounded-full border border-yellow-100 shadow font-black text-xs hover:scale-105 active:scale-95 transition-all" title="Nâng Cấp Tài Khoản VIP">
-          <span class="text-sm">👑</span>
-          <span class="text-[11px] font-extrabold hidden xs:inline sm:inline">Nâng cấp VIP</span>
+        <!-- Nút Nâng Cấp VIP -->
+        <button onclick="openVipModal()" id="btn-header-vip-upgrade" class="btn-3d flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-amber-950 px-3.5 sm:px-4 py-2 rounded-full border-2 border-yellow-100 shadow font-black text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all" title="Nâng Cấp Tài Khoản VIP">
+          <span class="text-base sm:text-lg">👑</span>
+          <span class="font-black hidden xs:inline sm:inline">Nâng cấp VIP</span>
         </button>
 
-        <div class="flex items-center gap-1 bg-amber-900/60 px-2.5 py-1 rounded-full border border-amber-400/50 shadow-inner cursor-pointer hover:bg-amber-900/80 transition-colors" onclick="openAvatarModal()" title="Bấm để vào Tủ Đồ Chibi (Đổi quà bằng Sao ⭐)">
-          <span class="text-yellow-300 text-base">⭐</span>
-          <span id="user-stars-display" class="font-extrabold text-amber-200 text-sm">180</span>
+        <!-- Xu / Sao -->
+        <div class="flex items-center gap-1.5 bg-amber-900/70 px-3.5 py-1.5 sm:py-2 rounded-full border-2 border-amber-400/60 shadow-inner cursor-pointer hover:bg-amber-900/90 transition-colors" onclick="openAvatarModal()" title="Bấm để vào Tủ Đồ Chibi (Đổi quà bằng Sao ⭐)">
+          <span class="text-yellow-300 text-lg sm:text-xl">⭐</span>
+          <span id="user-stars-display" class="font-black text-amber-200 text-sm sm:text-base">180</span>
         </div>
 
-        <!-- Nút âm thanh -->
-        <button onclick="toggleAudio()" id="btn-sound-toggle" class="p-1.5 bg-red-900/60 hover:bg-red-900 rounded-full border border-amber-400/40 text-amber-200" title="Bật/Tắt âm thanh">
-          <i data-lucide="volume-2" id="icon-sound" class="w-4 h-4"></i>
+        <!-- Nút Âm Thanh -->
+        <button onclick="toggleAudio()" id="btn-sound-toggle" class="p-2.5 sm:p-3 bg-red-900/70 hover:bg-red-900 rounded-full border-2 border-amber-400/50 text-amber-200 shadow-sm active:scale-95" title="Bật/Tắt âm thanh">
+          <i data-lucide="volume-2" id="icon-sound" class="w-5 h-5 sm:w-6 sm:h-6"></i>
         </button>
       </div>
     </div>
@@ -4510,19 +4511,19 @@
     if (starsEl) starsEl.textContent = AppState.stars;
 
     if (avatarEl) {
-      avatarEl.innerHTML = getCurrentAvatarHtml(40);
+      avatarEl.innerHTML = getCurrentAvatarHtml(80);
     }
 
     if (headerAuthBtn) {
       if (AppState.loggedInAccount) {
         headerAuthBtn.innerHTML = `
-          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all active:scale-95" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
+          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 rounded-full border-2 border-emerald-300 shadow font-black text-xs sm:text-sm transition-all active:scale-95" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
             <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
           </button>
         `;
       } else {
         headerAuthBtn.innerHTML = `
-          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-3 py-1 rounded-full border border-yellow-100 shadow font-black text-xs transition-all active:scale-95" title="Đăng nhập tài khoản">
+          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1.5 bg-amber-400 hover:bg-amber-500 text-amber-950 px-3.5 sm:px-4 py-2 rounded-full border-2 border-yellow-100 shadow font-black text-xs sm:text-sm transition-all active:scale-95" title="Đăng nhập tài khoản">
             <span>🔑 Đăng nhập</span>
           </button>
         `;
@@ -4988,11 +4989,6 @@
               <input type="text" id="modal-id-input" value="" placeholder="Nhập Mã ID Học Sinh..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-black text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner uppercase tracking-wide">
             </div>
 
-            <div>
-              <label class="block text-[11px] font-black text-slate-800 uppercase mb-0.5">Mật Khẩu ID:</label>
-              <input type="password" id="modal-id-pass-input" value="" placeholder="Nhập Mật Khẩu ID..." class="w-full px-3 py-2 rounded-xl border-2 border-amber-300 font-bold text-slate-800 text-xs focus:outline-none focus:border-amber-500 bg-white shadow-inner">
-            </div>
-
             <div class="flex items-center gap-2 pt-0.5">
               <input type="checkbox" id="modal-remember-me" class="w-3.5 h-3.5 text-amber-600 rounded border-amber-300 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
               <label for="modal-remember-me" class="text-[11px] font-bold text-slate-700 cursor-pointer">Ghi nhớ đăng nhập (Lần sau tự động vào học)</label>
@@ -5021,16 +5017,14 @@
     const emailEl = document.getElementById('modal-email-input');
     const emailPassEl = document.getElementById('modal-email-pass-input');
     const idEl = document.getElementById('modal-id-input');
-    const idPassEl = document.getElementById('modal-id-pass-input');
     const rememberEl = document.getElementById('modal-remember-me');
 
     const email = emailEl ? emailEl.value.trim() : '';
     const emailPass = emailPassEl ? emailPassEl.value.trim() : '';
     const id = idEl ? idEl.value.trim() : '';
-    const idPass = idPassEl ? idPassEl.value.trim() : '';
     const rememberMe = rememberEl ? rememberEl.checked : true;
 
-    processLoginGate(id, idPass, email, emailPass, rememberMe);
+    processLoginGate(id, '', email, emailPass, rememberMe);
   }
 
   function submitLoginForm() {
@@ -6200,15 +6194,7 @@
                 </div>
               </div>
 
-              <!-- 4. Mật Khẩu ID -->
-              <div>
-                <label class="block text-xs font-black text-slate-800 uppercase mb-1">
-                  Mật Khẩu ID:
-                </label>
-                <input type="password" id="gate-id-pass-input" value="" placeholder="Nhập Mật Khẩu ID..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-300 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-amber-500 bg-white shadow-inner">
-              </div>
-
-              <!-- 5. Checkbox Ghi nhớ đăng nhập -->
+              <!-- 4. Checkbox Ghi nhớ đăng nhập -->
               <div class="flex items-center gap-2 pt-1">
                 <input type="checkbox" id="gate-remember-me" class="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500 cursor-pointer" ${AppState.rememberLogin !== false ? 'checked' : ''}>
                 <label for="gate-remember-me" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
@@ -6247,16 +6233,14 @@
     const emailEl = document.getElementById('gate-email-input');
     const emailPassEl = document.getElementById('gate-email-pass-input');
     const idEl = document.getElementById('gate-id-input');
-    const idPassEl = document.getElementById('gate-id-pass-input');
     const rememberEl = document.getElementById('gate-remember-me');
 
     const email = emailEl ? emailEl.value.trim() : '';
     const emailPass = emailPassEl ? emailPassEl.value.trim() : '';
     const id = idEl ? idEl.value.trim() : '';
-    const idPass = idPassEl ? idPassEl.value.trim() : '';
     const rememberMe = rememberEl ? rememberEl.checked : true;
 
-    processLoginGate(id, idPass, email, emailPass, rememberMe);
+    processLoginGate(id, '', email, emailPass, rememberMe);
   }
 
   function processLoginGate(idInput, idPassInput, emailInput, emailPassInput, rememberMe) {
