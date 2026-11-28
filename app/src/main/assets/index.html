@@ -245,6 +245,9 @@
           <div class="flex items-center gap-1.5 mt-0.5">
             <span id="header-grade-badge" class="bg-red-900/70 text-yellow-300 text-xs px-2 py-0.5 rounded-full font-bold border border-yellow-400/40">Lớp 4</span>
             <span id="header-vip-status" class="bg-emerald-600 text-white text-[11px] px-2 py-0.5 rounded-full font-semibold">Tài khoản Thường</span>
+            <button onclick="event.stopPropagation(); openAvatarModal();" class="bg-amber-400 hover:bg-amber-500 text-amber-950 text-[11px] px-2.5 py-0.5 rounded-full font-black border border-yellow-100 shadow-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer ml-0.5" title="Bấm để mở Tủ Đồ Chibi">
+              <span>🎭 Tủ đồ</span>
+            </button>
           </div>
         </div>
       </div>
@@ -4396,13 +4399,13 @@
     if (headerAuthBtn) {
       if (AppState.loggedInAccount) {
         headerAuthBtn.innerHTML = `
-          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
+          <button onclick="openAccountModal()" class="btn-3d flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-full border border-emerald-300 shadow font-black text-xs transition-all active:scale-95" title="Xem thông tin tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
             <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
           </button>
         `;
       } else {
         headerAuthBtn.innerHTML = `
-          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-2.5 py-1 rounded-full border border-yellow-200 shadow font-black text-xs transition-all" title="Đăng nhập tài khoản ID học sinh (l1_001...)">
+          <button onclick="openLoginModal()" class="btn-3d flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-amber-950 px-3 py-1 rounded-full border border-yellow-100 shadow font-black text-xs transition-all active:scale-95" title="Đăng nhập tài khoản">
             <span>🔑 Đăng nhập</span>
           </button>
         `;
@@ -5233,7 +5236,7 @@
             </button>
 
             <button onclick="openDisclaimerModal()" class="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold text-xs flex items-center justify-center gap-1.5">
-              <span>🛡️</span> Chính sách quyền riêng tư & Bản quyền
+              <span>🛡️</span> Chính sách quyền riêng tư & Bản quyền (v1.0.20)
             </button>
           </div>
 
@@ -6265,75 +6268,68 @@
     }
 
     root.innerHTML = `
-      <!-- Banner Tiêu Đề Siêu Trạng Nhí Tiếng Việt & Khối Lớp -->
-      <div class="scroll-card p-3.5 sm:p-5 mb-5 bg-white border-2 border-[#C8E6C9] relative overflow-hidden shadow-sm">
+      <!-- Banner Tiêu Đề Siêu Trạng Nhí Tiếng Việt & Khối Lớp (Banner & Avatar to 1.5x, Thông báo ngang hàng với Tên App) -->
+      <div class="scroll-card p-4 sm:p-6 md:p-8 mb-6 bg-white border-4 border-[#C8E6C9] relative overflow-hidden shadow-md">
         <div class="dong-son-pattern absolute inset-0 pointer-events-none opacity-15"></div>
-        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 w-full">
 
-          <!-- Cụm Tiêu Đề & Hình Đại Diện: Chiếm full width trên mobile, không bị ép hẹp -->
-          <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto min-w-0 flex-1">
-            <!-- Hình Đại Diện (Siêu Trạng Nhí) -->
-            <div class="relative shrink-0 cursor-pointer" onclick="openAvatarModal()" title="Hình đại diện Siêu Trạng Nhí Tiếng Việt • Vào Tủ Đồ Chibi">
-              <div class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-emerald-100 via-white to-emerald-200 p-1 shadow-md border-2 border-[#C8E6C9] flex items-center justify-center transform hover:scale-105 transition-all overflow-hidden bg-white">
+        <!-- Khối hàng ngang: Avatar 1.5x + Tên App 1.5x + Khối Thông Báo Đăng Nhập Ngang Hàng -->
+        <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-6 w-full">
+
+          <!-- Cụm Trái: Avatar 1.5x + Tên App -->
+          <div class="flex items-center gap-4 sm:gap-6 w-full lg:w-auto shrink-0">
+            <!-- Hình Đại Diện Avatar (To gấp 1.5 lần) -->
+            <div class="relative shrink-0 cursor-pointer" onclick="openAvatarModal()" title="Hình đại diện Siêu Trạng Nhí • Vào Tủ Đồ Chibi">
+              <div class="w-24 h-24 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-emerald-100 via-white to-emerald-200 p-1.5 shadow-lg border-4 border-[#C8E6C9] flex items-center justify-center transform hover:scale-105 transition-all overflow-hidden bg-white">
                 <img src="app_logo.png" alt="Siêu Trạng Nhí Tiếng Việt" class="w-full h-full object-cover rounded-full" onerror="this.onerror=null; this.src='app_logo.png';">
               </div>
             </div>
 
-            <!-- Khối Tiêu Đề Cân Bằng: Dùng whitespace-nowrap & text-left để chữ không bao giờ bị bẻ dọc -->
-            <div class="min-w-0 flex-1 flex flex-col justify-center text-left">
-              <h1 class="text-base sm:text-2xl md:text-3xl font-black text-red-900 tracking-tight leading-tight">
+            <!-- Tên App "Siêu Trạng Nhí Tiếng Việt" (To 1.5x) -->
+            <div class="min-w-0 flex flex-col justify-center text-left shrink-0">
+              <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-red-900 tracking-tight leading-tight">
                 <span class="inline-block whitespace-nowrap">Siêu Trạng Nhí</span>
-                <span class="inline-block whitespace-nowrap text-emerald-700 ml-1 sm:ml-0 sm:block">Tiếng Việt</span>
+                <span class="inline-block whitespace-nowrap text-emerald-700 ml-1.5 sm:ml-0 sm:block">Tiếng Việt</span>
               </h1>
-              <div class="inline-block self-start bg-slate-50 text-slate-600 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1 border border-slate-200 text-[9px] sm:text-[11px] leading-tight max-w-full">
+              <div class="inline-block self-start bg-emerald-50 text-emerald-800 font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider mt-2 border border-emerald-200 text-[10px] sm:text-xs leading-tight">
                 Dành cho Học sinh & Giáo viên Tiểu học
               </div>
             </div>
           </div>
 
-          <!-- Thanh 2 Nút Action: Bố trí hàng ngang gọn gàng bên dưới trên mobile, bên phải trên desktop -->
-          <div class="flex flex-row items-center justify-end gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-dashed border-amber-200 sm:border-none">
-            ${AppState.loggedInAccount ? `
-              <button onclick="openAccountModal()" class="btn-3d flex-1 sm:flex-initial bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-400 text-emerald-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Quản lý tài khoản ${AppState.loggedInAccount.id.toUpperCase()}">
-                <span>👤 ${AppState.loggedInAccount.id.toUpperCase()}</span>
-              </button>
+          <!-- Cụm Phải: Ngang Hàng Tên App - Khối Yêu Cầu Đăng Nhập / Trạng Thái Tài Khoản -->
+          <div class="flex-1 w-full lg:w-auto min-w-0">
+            ${!AppState.loggedInAccount ? `
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3 border-2 border-amber-300">
+                <div class="flex items-center gap-2.5 min-w-0 text-left">
+                  <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
+                  <div class="min-w-0">
+                    <h4 class="font-black text-xs sm:text-sm text-yellow-100 uppercase tracking-wide">Yêu Cầu Đăng Nhập Tài Khoản</h4>
+                    <p class="text-[11px] sm:text-xs text-white/95 leading-relaxed font-medium mt-0.5">
+                      Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b class="underline font-bold">junvu.dev@gmail.com</b> để kích hoạt!
+                    </p>
+                  </div>
+                </div>
+                <button onclick="openLoginModal()" class="btn-3d btn-3d-gold px-4 py-2 rounded-xl text-amber-950 font-black text-xs whitespace-nowrap shadow shrink-0 active:scale-95">
+                  Đăng Nhập Ngay 🚀
+                </button>
+              </div>
             ` : `
-              <button onclick="openLoginModal()" class="btn-3d flex-1 sm:flex-initial bg-amber-400 hover:bg-amber-500 border-2 border-yellow-200 text-amber-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Đăng nhập tài khoản ID học sinh">
-                <span>🔑 Đăng Nhập</span>
-              </button>
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-sm text-xs font-medium text-left">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="text-2xl shrink-0">✅</span>
+                  <div>
+                    <div class="font-black text-emerald-900 text-sm">Tài khoản: ${AppState.loggedInAccount.id.toUpperCase()}</div>
+                    <div class="text-[11px] text-emerald-800 font-bold mt-0.5">Đã mở khóa LỚP ${AppState.lockedToGrade || AppState.selectedGrade} (Thời hạn còn ${Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)))} ngày)</div>
+                  </div>
+                </div>
+                <button onclick="openAccountModal()" class="btn-3d px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs whitespace-nowrap shadow shrink-0 active:scale-95">
+                  Chi tiết ➔
+                </button>
+              </div>
             `}
-            <button onclick="openAvatarModal()" class="btn-3d flex-1 sm:flex-initial bg-amber-100 hover:bg-amber-200 border-2 border-amber-400 text-amber-950 font-black text-xs px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 whitespace-nowrap" title="Tủ đồ Chibi (Đổi quà bằng Sao)">
-              <span>🎭 Tủ Đồ</span>
-            </button>
           </div>
 
         </div>
-
-        <!-- Banner nhắc đăng nhập nếu chưa đăng nhập -->
-        ${!AppState.loggedInAccount ? `
-          <div class="mt-3.5 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5">
-              <span class="text-2xl sm:text-3xl shrink-0">🔑</span>
-              <div>
-                <h4 class="font-black text-xs sm:text-sm text-yellow-100">Yêu Cầu Đăng Nhập Tài Khoản Học Sinh</h4>
-                <p class="text-[11px] text-white/90">Mở khóa trọn bộ 18 vòng thi. Vui lòng liên hệ email: <b>junvu.dev@gmail.com</b> để kích hoạt tài khoản!</p>
-              </div>
-            </div>
-            <button onclick="openLoginModal()" class="btn-3d btn-3d-gold px-4 py-2 rounded-xl text-amber-950 font-black text-xs whitespace-nowrap shadow shrink-0">
-              Đăng Nhập Ngay 🚀
-            </button>
-          </div>
-        ` : `
-          <div class="mt-3.5 p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-medium">
-            <div class="flex items-center gap-2">
-              <span class="text-base">✅</span>
-              <span>Tài khoản <b>${AppState.loggedInAccount.id.toUpperCase()}</b> đã kích hoạt mở khóa <b>LỚP ${AppState.lockedToGrade}</b> trong vòng 1 năm (Còn <b>${Math.max(0, Math.ceil((AppState.loggedInAccount.expiryTimestamp - Date.now()) / (1000 * 60 * 60 * 24)))} ngày</b>)</span>
-            </div>
-            <button onclick="openAccountModal()" class="text-emerald-800 font-extrabold underline hover:text-emerald-900 shrink-0">
-              Chi tiết tài khoản ➔
-            </button>
-          </div>
-        `}
 
         <!-- Thanh chọn Khối lớp (Lớp 1 - 5) -->
         <div class="mt-3.5 pt-3 border-t border-amber-200/80">
@@ -6377,14 +6373,15 @@
         <p class="font-medium text-slate-600 mb-2.5">
           Siêu Trạng Nhí Tiếng Việt • Nền tảng học tập & rèn luyện tiếng Việt độc lập cho Học sinh & Giáo viên GDPT
         </p>
-        <div class="flex flex-wrap items-center justify-center gap-2 mb-2">
+        <div class="flex flex-col items-center justify-center gap-1.5 mb-2">
           <button onclick="openDisclaimerModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border-2 border-emerald-400 shadow-sm text-emerald-900 font-extrabold hover:bg-emerald-50 active:scale-95 transition-all text-xs">
             <span>🛡️</span>
             <span>Chính sách quyền riêng tư & Bản quyền</span>
           </button>
+          <span class="text-[11px] font-bold text-slate-500">Phiên bản: <b>v1.0.20</b></span>
         </div>
-        <p class="text-[11px] text-slate-400 mt-2.5">
-          Siêu Trạng Nhí Tiếng Việt V06 • Bản quyền nội dung rèn luyện độc lập © 2026 Siêu Trạng Nhí Tiếng Việt
+        <p class="text-[11px] text-slate-400 mt-2">
+          Siêu Trạng Nhí Tiếng Việt v1.0.20 • Bản quyền nội dung rèn luyện độc lập © 2026 Siêu Trạng Nhí Tiếng Việt
         </p>
       </footer>
     `;
