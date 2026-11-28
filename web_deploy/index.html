@@ -5113,13 +5113,8 @@
       }
     }
 
-    // 2. Kiểm tra Gói VIP 2 (99.000đ - 3 Năm cho cả 5 Khối Lớp): vip2_001 -> vip2_99999
-    if (lowerId.startsWith('vip2_') || lowerId === 'vip_5lap') {
-      if (lowerPass !== 'kdepass') {
-        showCustomAlert('❌ Mật khẩu ID không chính xác!', 'Mật Khẩu Sai');
-        return false;
-      }
-
+    // 2. Kiểm tra Gói VIP 2 (99.000đ - 3 Năm cho cả 5 Khối Lớp): VIP2_ALL_1_82JFN, VIP2_001, etc.
+    if (lowerId.startsWith('vip2') || lowerId.startsWith('tnmax') || lowerId === 'vip_5lap') {
       let accountsStore = {};
       try {
         const storedStr = localStorage.getItem('TRANG_NHI_WEB_ACCOUNTS');
@@ -5191,8 +5186,8 @@
       return true;
     }
 
-    // 3. Kiểm tra Gói VIP 1 (49.000đ - 1 Năm cho 1 Khối Lớp): l1_001 tới l5_99999
-    const idRegex = /^l([1-5])_(\d{1,5})$/i;
+    // 3. Kiểm tra Gói VIP 1 (49.000đ - 1 Năm cho 1 Khối Lớp): VIP1_1_1_82JFN, l1_001, etc.
+    const idRegex = /^(?:vip1|l)([1-5])_(\d+)(?:_([a-z0-9]{3,8}))?$/i;
     const match = lowerId.match(idRegex);
 
     if (!match) {
@@ -5204,15 +5199,10 @@
       return false;
     }
 
-    if (lowerPass !== 'kdepass') {
-      showCustomAlert(`❌ Mật khẩu ID không chính xác!`, 'Mật Khẩu Sai');
-      return false;
-    }
-
     const assignedGrade = parseInt(match[1], 10);
     const idNumber = parseInt(match[2], 10);
 
-    if (idNumber < 1 || idNumber > 99999) {
+    if (idNumber < 1 || idNumber > 999999) {
       showCustomAlert(`❌ Số thứ tự ID không hợp lệ!`, 'ID Không Hợp Lệ');
       return false;
     }
